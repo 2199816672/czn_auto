@@ -11,6 +11,12 @@ logs/
 debug/
 AGENTS.md
 
+# 构建产物
+dist/
+build/
+*.spec
+*.zip
+
 # 临时文件
 *.bak
 *.recovered
