@@ -52,6 +52,7 @@ class GameState(Enum):
     DICE_NEXT = "dice_next"
     CODEX_SYNTH = "codex_synth"
     DREAM_CONFIRM = "dream_confirm"
+    UNEXPECTED_ROOM = "unexpected_room"
     UNKNOWN = "unknown"
 
 
@@ -194,6 +195,7 @@ class StateDetector:
             ("dream_confirm", GameState.DREAM_CONFIRM),
             ("settlement_confirm", GameState.RESULT_NEXT),
             ("buff_select", GameState.BUFF_SELECT),
+            ("unexpected_room", GameState.UNEXPECTED_ROOM),
         ]
         for tpl_name, state in checks:
             if self.matcher.exists(tpl_name):
