@@ -1007,13 +1007,17 @@ class CznZeroFarmGUI:
                         sim.click_at(detector.last_pos[0], detector.last_pos[1], res[0], res[1])
                         clicked = True
                     if not clicked:
-                        for tpl in ("codex_btn0", "codex_btn1", "codex_btn2"):
+                        for tpl in ("codex_btn0", "codex_btn1", "codex_btn2", "codex_btn3", "codex_btn4"):
                             found, conf, pos = detector.matcher.match(frame, tpl, 0.9)
                             if found:
-                                logging.info(f"合成 {tpl} ({conf:.2f})")
+                                if tpl in ("codex_btn3", "codex_btn4"):
+                                    logging.info(f"合成 {tpl} ({conf:.2f}) 往上300像素点击")
+                                    sim.click_at(pos[0], pos[1] - 300, res[0], res[1])
+                                    time.sleep(0.2)
+                                else:
+                                    logging.info(f"合成 {tpl} ({conf:.2f})")
                                 sim.click_at(pos[0], pos[1], res[0], res[1])
                                 clicked = True; break
-
                     if not clicked:
                         for tpl in ("settle_done_1", "settle_done_2"):
                             if detector.matcher.match(frame, tpl, 0.98)[0]:
