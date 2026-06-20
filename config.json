@@ -1,7 +1,7 @@
 {
   "_说明": "零式系统自动刷取脚本配置文件",
   "_坐标说明": "所有坐标均为 (x, y) 像素值，基于 1920x1080 分辨率。不同分辨率请按比例缩放。",
-  "template_profile": "templates_global",
+  "template_profile": "templates_cn",
   "_template_profiles": [
     "templates_global",
     "templates_cn"
@@ -39,6 +39,10 @@
       0
     ],
     "inspiration_card": [
+      0,
+      150
+    ],
+    "card_duplicate": [
       0,
       150
     ],
@@ -169,12 +173,19 @@
     "target_delay": 0.15,
     "end_turn_delay": 0.5
   },
+  "codex_use_btn1": true,
   "map_navigation": {
     "prefer_elite": false,
     "prefer_shop": false,
     "prefer_rest": false,
     "scan_from_center": true
   },
+  "room_priority": [
+    "room_event",
+    "room_rest",
+    "room_battle",
+    "room_elite"
+  ],
   "timing": {
     "screenshot_interval": 0.2,
     "click_delay": 0.1,

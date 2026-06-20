@@ -242,12 +242,7 @@ class ConfigDialog(tk.Toplevel):
                                   values=["国际服", "国服"],
                                   width=12, state="readonly")
         server_cb.grid(row=0, column=1, padx=5, pady=10, sticky="w")
-        def _check_server(event):
-            if self.server_var.get() == "国服":
-                messagebox.showwarning("国服暂不支持", "国服模板尚未完善，目前仅支持国际服。\n请选择「国际服」继续使用。")
-                self.server_var.set("国际服")
-        server_cb.bind("<<ComboboxSelected>>", _check_server)
-        ttk.Label(sf, text="开发中...", foreground="#888").grid(row=0, column=2, padx=5, pady=10, sticky="w")
+        ttk.Label(sf, text="", foreground="#888", width=8).grid(row=0, column=2, padx=5, pady=10, sticky="w")
 
         mf = ttk.Frame(nb); nb.add(mf, text="运行模式")
         ttk.Label(mf, text="刷取目标:", foreground=COLOR_ACCENT).grid(row=0, column=0, padx=10, pady=(10, 5), sticky="w")
@@ -294,6 +289,24 @@ class ConfigDialog(tk.Toplevel):
         self.keep_mouse_var = tk.BooleanVar(value=self.cfg.get("debug", {}).get("keep_mouse", False))
         ttk.Label(mf, text="调试模式:", foreground=COLOR_ACCENT).grid(row=4, column=0, padx=10, pady=(15, 2), sticky="w")
         tk.Checkbutton(mf, text="鼠标不归位", variable=self.keep_mouse_var, bg=COLOR_CARD, fg=COLOR_TEXT, selectcolor=COLOR_CARD, activebackground=COLOR_CARD, activeforeground=COLOR_TEXT).grid(row=4, column=1, padx=5, pady=(15, 2), sticky="w")
+
+        ttk.Separator(mf, orient="horizontal").grid(row=5, column=0, columnspan=2, sticky="ew", pady=10, padx=10)
+        self.codex_btn1_var = tk.BooleanVar(value=self.cfg.get("codex_use_btn1", True))
+        ttk.Label(mf, text="法典合成:", foreground=COLOR_ACCENT).grid(row=6, column=0, padx=10, pady=(5, 10), sticky="w")
+        tk.Checkbutton(mf, text="使用卡厄斯宝珠 (codex_btn1)", variable=self.codex_btn1_var, bg=COLOR_CARD, fg=COLOR_TEXT, selectcolor=COLOR_CARD, activebackground=COLOR_CARD, activeforeground=COLOR_TEXT).grid(row=6, column=1, padx=5, pady=(5, 10), sticky="w")
+
+        # 路线优先级 tab
+        rf = ttk.Frame(nb); nb.add(rf, text="路线优先级")
+        ttk.Label(rf, text="节点选择优先级（上为优先，下为兜底）:", foreground=COLOR_ACCENT).grid(row=0, column=0, columnspan=3, padx=10, pady=(10, 5), sticky="w")
+        room_names = {"room_event": "事件", "room_rest": "節火", "room_battle": "战斗", "room_elite": "精英"}
+        self.room_listbox = tk.Listbox(rf, bg=COLOR_CARD, fg=COLOR_TEXT, selectbackground=COLOR_ACCENT, selectmode=tk.SINGLE, height=6, width=30, font=("Microsoft YaHei", 10))
+        self.room_listbox.grid(row=1, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+        saved = self.cfg.get("room_priority", ["room_event", "room_rest", "room_battle", "room_elite"])
+        for r in saved:
+            self.room_listbox.insert(tk.END, f"{room_names.get(r, r)} ({r})")
+        btnf = ttk.Frame(rf); btnf.grid(row=2, column=0, columnspan=3, pady=5)
+        ttk.Button(btnf, text="上移", command=self._room_move_up).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btnf, text="下移", command=self._room_move_down).pack(side=tk.LEFT, padx=5)
 
         zf = ttk.Frame(nb); nb.add(zf, text="赛季图初始刷取")
         zf_canvas = tk.Canvas(zf, bg=COLOR_BG, highlightthickness=0)
@@ -378,6 +391,24 @@ class ConfigDialog(tk.Toplevel):
     def _on_mode_change(self):
         pass
 
+    def _room_move_up(self):
+        sel = self.room_listbox.curselection()
+        if sel and sel[0] > 0:
+            i = sel[0]
+            val = self.room_listbox.get(i)
+            self.room_listbox.delete(i)
+            self.room_listbox.insert(i - 1, val)
+            self.room_listbox.selection_set(i - 1)
+
+    def _room_move_down(self):
+        sel = self.room_listbox.curselection()
+        if sel and sel[0] < self.room_listbox.size() - 1:
+            i = sel[0]
+            val = self.room_listbox.get(i)
+            self.room_listbox.delete(i)
+            self.room_listbox.insert(i + 1, val)
+            self.room_listbox.selection_set(i + 1)
+
     def save(self):
         for k, var in self.entries.items():
             parts = k.split("_", 1)
@@ -397,7 +428,7 @@ class ConfigDialog(tk.Toplevel):
                     self.cfg.setdefault("combat", {})[rest] = int(var.get()) if "max_turns" in rest else float(var.get())
             except ValueError:
                 pass
-        self.cfg["template_profile"] = "templates_global"
+        self.cfg["template_profile"] = "templates_cn" if self.server_var.get() == "国服" else "templates_global"
         self.cfg.setdefault("game", {})["mode"] = self.mode_var.get()
         self.cfg["game"]["mission"] = self.mission_var.get()
         self.cfg["game"]["input_backend"] = self.input_backend_var.get()
@@ -415,6 +446,10 @@ class ConfigDialog(tk.Toplevel):
         self.cfg["ocr"]["buff_region"] = [int(v.get()) for v in self.ocr_buff_region]
         self.cfg["ocr"]["buff_ocr_keyword"] = self.ocr_buff_keyword.get()
         self.cfg.setdefault("debug", {})["keep_mouse"] = self.keep_mouse_var.get()
+        items = self.room_listbox.get(0, tk.END)
+        priority = [it.split(" (")[1].rstrip(")") for it in items]
+        self.cfg["room_priority"] = priority
+        self.cfg["codex_use_btn1"] = self.codex_btn1_var.get()
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(self.cfg, f, ensure_ascii=False, indent=2)
         messagebox.showinfo("成功", "已保存")
@@ -970,7 +1005,7 @@ class CznZeroFarmGUI:
                     continue
                 unknown_cnt = 0; t = sc.timing
 
-                settlement_tpls = ["settlement_click", "dismantle_confirm", "settlement_confirm", "node_settlement", "next_step"]
+                settlement_tpls = ["settlement_click", "dismantle_confirm", "settlement_confirm", "dismantle_equip", "node_settlement", "next_step"]
 
                 now = time.time()
                 if not hasattr(self, '_state_cd'):
@@ -1008,6 +1043,8 @@ class CznZeroFarmGUI:
                         clicked = True
                     if not clicked:
                         for tpl in ("codex_btn0", "codex_btn1", "codex_btn2", "codex_btn3", "codex_btn4"):
+                            if tpl == "codex_btn1" and not cfg.get("codex_use_btn1", True):
+                                continue
                             found, conf, pos = detector.matcher.match(frame, tpl, 0.9)
                             if found:
                                 if tpl in ("codex_btn3", "codex_btn4"):
@@ -1029,8 +1066,7 @@ class CznZeroFarmGUI:
                     else:
                         time.sleep(0.5)
                     continue
-                if state == GameState.AUTO_BATTLE_OFF and "auto_battle_off" in self._once:
-                    time.sleep(sr_delay); continue
+
                 if state == GameState.MAIN_MENU:
                     self._buff_done = False
                     self._buff_cooldown = 0.0
@@ -1071,13 +1107,19 @@ class CznZeroFarmGUI:
                         time.sleep(0.5)
                     continue
                 elif state == GameState.ROOM_SELECT:
-                    rooms = [("room_rest", 4), ("room_battle", 1), ("room_event", 2), ("room_elite", 3)]
+                    room_order = cfg.get("room_priority", ["room_event", "room_rest", "room_battle", "room_elite"])
+                    rooms = [(r, i) for i, r in enumerate(room_order)] + [("boss_node", 99), ("room_fallback", 100)]
                     clicked = False
                     for name, _ in rooms:
                         found, conf, pos = detector.matcher.match(frame, name, threshold=0.9)
                         if found:
                             logging.info(f"{name} ({conf:.2f})")
-                            sim.click_at(pos[0], pos[1], res[0], res[1])
+                            if name == "room_fallback":
+                                sim.click_at(pos[0] + 300, pos[1], res[0], res[1])
+                            else:
+                                sim.click_at(pos[0], pos[1], res[0], res[1])
+                            if name in ("room_rest", "room_battle", "room_elite", "boss_node", "room_fallback"):
+                                time.sleep(1.0)
                             clicked = True; break
                     if not clicked:
                         logging.warning("所有房间没匹配到，点击默认节点")
@@ -1111,7 +1153,7 @@ class CznZeroFarmGUI:
                         found, conf, pos = detector.matcher.match(frame, tpl, 0.9)
                         if found:
                             logging.info(f"{tpl} ({conf:.2f})")
-                            if tpl == "settlement_confirm":
+                            if tpl == "settlement_confirm":  # 取消选择装备
                                 sim.click_at(pos[0], pos[1], res[0], res[1])
                                 time.sleep(0.2)
                                 sim.click_at(pos[0] - 420, pos[1], res[0], res[1])
@@ -1142,11 +1184,17 @@ class CznZeroFarmGUI:
                     sim.click_at(detector.last_pos[0], detector.last_pos[1], res[0], res[1])
                 elif state == GameState.EVENT_SCREEN:
                     stats["events"] += 1
-                    y = detector.last_pos[1]
-                    for x in (1350, 990, 600):
+                    if detector.last_template == "event_fallback":
+                        logging.info("事件保底")
                         for _ in range(2):
-                            sim.click_at(x, y, res[0], res[1])
+                            sim.click_at(detector.last_pos[0], detector.last_pos[1] - 80, res[0], res[1])
                             time.sleep(0.2)
+                    else:
+                        y = detector.last_pos[1]
+                        for x in (1350, 990, 600):
+                            for _ in range(2):
+                                sim.click_at(x, y, res[0], res[1])
+                                time.sleep(0.2)
                 elif state == GameState.DEATH_SCREEN:
                     logging.info("死亡")
                     combat_mod.reset_battle()
@@ -1171,7 +1219,36 @@ class CznZeroFarmGUI:
                     _click("continue_forward")
                 elif state == GameState.CONFIRM_ACQUIRE:
                     logging.info("确认获得")
-                    _click("confirm_acquire")
+                    if detector.last_template == "choose_fate":
+                        bx, by = detector.last_pos
+                        for dx, dy in [(-500, -250), (0, -250), (500, -250), (750, 0)]:
+                            sim.click_at(bx + dx, by + dy, res[0], res[1])
+                            time.sleep(0.2)
+                    else:
+                        _click("confirm_acquire")
+                        tpl = detector.last_template
+                        if tpl and tpl in detector.matcher.templates:
+                            h, w = detector.matcher.templates[tpl].shape[:2]
+                            left_x = detector.last_pos[0] - w // 2
+                            sim.click_at(left_x, detector.last_pos[1], res[0], res[1])
+                elif state == GameState.CONFIRM:
+                    logging.info("确认")
+                    sim.click_at(detector.last_pos[0], detector.last_pos[1], res[0], res[1])
+                elif state == GameState.BUG_CLOSE:
+                    logging.info("国服bug关闭")
+                    sim.click_at(detector.last_pos[0], detector.last_pos[1], res[0], res[1])
+                elif state == GameState.CLOSE_MISTOUCH:
+                    logging.info("关闭误触界面")
+                    sim.click_at(detector.last_pos[0], detector.last_pos[1] - 300, res[0], res[1])
+                elif state == GameState.SPARKLE_EVENT:
+                    logging.info("闪光事件")
+                    bx, by = detector.last_pos
+                    for dx, dy in [(-1205, -200), (-1025, -700), (0, 0)]:
+                        sim.click_at(bx + dx, by + dy, res[0], res[1])
+                        time.sleep(0.2)
+                elif state == GameState.CODEX_COMPLETE:
+                    logging.info("完成法典")
+                    sim.click_at(detector.last_pos[0], detector.last_pos[1] + 210, res[0], res[1])
                 elif state == GameState.SKIP_LEFTMOST:
                     matches = detector.matcher.match_all(frame, "skip_leftmost", threshold=0.8)
                     if matches:
@@ -1185,7 +1262,6 @@ class CznZeroFarmGUI:
                 elif state == GameState.AUTO_BATTLE_OFF:
                     logging.info("关闭自动战斗")
                     sim.click_at(detector.last_pos[0], detector.last_pos[1], res[0], res[1])
-                    self._once.add("auto_battle_off")
                 elif state == GameState.WRONG_PAGE:
                     logging.info("误入其他页面")
                     _click("wrong_page")
@@ -1198,6 +1274,9 @@ class CznZeroFarmGUI:
                 elif state == GameState.INSPIRATION_CARD:
                     logging.info("灵感卡")
                     _click("inspiration_card")
+                elif state == GameState.CARD_DUPLICATE:
+                    logging.info("复制卡牌")
+                    _click("card_duplicate")
                 elif state == GameState.CARD_CONVERT:
                     logging.info("卡牌转换")
                     _click("card_convert")

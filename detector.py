@@ -52,6 +52,12 @@ class GameState(Enum):
     DICE_NEXT = "dice_next"
     CODEX_SYNTH = "codex_synth"
     DREAM_CONFIRM = "dream_confirm"
+    CONFIRM = "confirm"
+    BUG_CLOSE = "bug_close"
+    SPARKLE_EVENT = "sparkle_event"
+    CODEX_COMPLETE = "codex_complete"
+    CLOSE_MISTOUCH = "close_mistouch"
+    CARD_DUPLICATE = "card_duplicate"
     UNEXPECTED_ROOM = "unexpected_room"
     BOSS_NODE = "boss_node"
     UNKNOWN = "unknown"
@@ -156,12 +162,15 @@ class StateDetector:
             ("node_settlement", GameState.RESULT_NEXT),
             ("next_step", GameState.RESULT_NEXT),
             ("dismantle_confirm", GameState.RESULT_NEXT),
+            ("dismantle_equip", GameState.RESULT_NEXT),
             ("fate_reward", GameState.FATE_REWARD),
             ("event_screen", GameState.EVENT_SCREEN),
             ("event_option", GameState.EVENT_SCREEN),
             ("event_option2", GameState.EVENT_SCREEN),
+            ("event_fallback", GameState.EVENT_SCREEN),
             ("event_dice", GameState.EVENT_DICE),
             ("dice_next", GameState.DICE_NEXT),
+            ("rest_alt", GameState.REST_SCREEN),
             ("rest_screen", GameState.REST_SCREEN),
             ("death_screen", GameState.DEATH_SCREEN),
             ("extraction_screen", GameState.EXTRACTION),
@@ -169,6 +178,7 @@ class StateDetector:
             ("room_elite", GameState.ROOM_SELECT),
             ("room_event", GameState.ROOM_SELECT),
             ("room_rest", GameState.ROOM_SELECT),
+            ("room_fallback", GameState.ROOM_SELECT),  # 节点选择保底
             ("map_screen", GameState.MAP_SCREEN),
             ("boss_node", GameState.BOSS_NODE),
             ("team_enter", GameState.TEAM_ENTER),
@@ -180,6 +190,8 @@ class StateDetector:
             ("codex_btn2", GameState.CODEX_SYNTH),
             ("codex_btn3", GameState.CODEX_SYNTH),
             ("codex_btn4", GameState.CODEX_SYNTH),
+            ("codex_complete", GameState.CODEX_COMPLETE),
+            ("codex_complete2", GameState.CODEX_COMPLETE),
             ("zero_system_entry", GameState.ZERO_SYSTEM_ENTRY),
             ("main_menu", GameState.MAIN_MENU),
             ("retreat_btn", GameState.RETREAT),
@@ -187,7 +199,9 @@ class StateDetector:
             ("close_view", GameState.CLOSE_VIEW),
             ("continue_forward", GameState.CONTINUE_FORWARD),
             ("continue_forward2", GameState.CONTINUE_FORWARD),
+            ("choose_fate", GameState.CONFIRM_ACQUIRE),
             ("confirm_acquire", GameState.CONFIRM_ACQUIRE),
+            ("confirm", GameState.CONFIRM),
             ("skip_leftmost", GameState.SKIP_LEFTMOST),
             ("card_reward_skip", GameState.CARD_REWARD_SKIP),
             ("inspiration_card", GameState.INSPIRATION_CARD),
@@ -195,10 +209,14 @@ class StateDetector:
             ("select_character", GameState.SELECT_CHARACTER),
             ("strong_select", GameState.SELECT_CHARACTER),
             ("delete_save", GameState.DELETE_SAVE),
+            ("settlement_confirm", GameState.RESULT_NEXT),  # 取消选择装备
             ("dream_confirm", GameState.DREAM_CONFIRM),
-            ("settlement_confirm", GameState.RESULT_NEXT),
             ("buff_select", GameState.BUFF_SELECT),
             ("unexpected_room", GameState.UNEXPECTED_ROOM),
+            ("bug_close", GameState.BUG_CLOSE),
+            ("sparkle_event", GameState.SPARKLE_EVENT),
+            ("close_mistouch", GameState.CLOSE_MISTOUCH),
+            ("card_duplicate", GameState.CARD_DUPLICATE),
         ]
         for tpl_name, state in checks:
             if self.matcher.exists(tpl_name):
