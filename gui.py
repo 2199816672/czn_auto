@@ -295,6 +295,10 @@ class ConfigDialog(tk.Toplevel):
         ttk.Label(mf, text="法典合成:", foreground=COLOR_ACCENT).grid(row=6, column=0, padx=10, pady=(5, 10), sticky="w")
         tk.Checkbutton(mf, text="使用卡厄斯宝珠 (codex_btn1)", variable=self.codex_btn1_var, bg=COLOR_CARD, fg=COLOR_TEXT, selectcolor=COLOR_CARD, activebackground=COLOR_CARD, activeforeground=COLOR_TEXT).grid(row=6, column=1, padx=5, pady=(5, 10), sticky="w")
 
+        self.retreat_var = tk.BooleanVar(value=self.cfg.get("game", {}).get("retreat_on_first_floor", False))
+        ttk.Label(mf, text="仅推一层:", foreground=COLOR_ACCENT).grid(row=7, column=0, padx=10, pady=(5, 10), sticky="w")
+        tk.Checkbutton(mf, text="推完一层后撤退", variable=self.retreat_var, bg=COLOR_CARD, fg=COLOR_TEXT, selectcolor=COLOR_CARD, activebackground=COLOR_CARD, activeforeground=COLOR_TEXT).grid(row=7, column=1, padx=5, pady=(5, 10), sticky="w")
+
         # 路线优先级 tab
         rf = ttk.Frame(nb); nb.add(rf, text="路线优先级")
         ttk.Label(rf, text="节点选择优先级（上为优先，下为兜底）:", foreground=COLOR_ACCENT).grid(row=0, column=0, columnspan=3, padx=10, pady=(10, 5), sticky="w")
@@ -449,6 +453,7 @@ class ConfigDialog(tk.Toplevel):
         items = self.room_listbox.get(0, tk.END)
         priority = [it.split(" (")[1].rstrip(")") for it in items]
         self.cfg["room_priority"] = priority
+        self.cfg["game"]["retreat_on_first_floor"] = self.retreat_var.get()
         self.cfg["codex_use_btn1"] = self.codex_btn1_var.get()
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(self.cfg, f, ensure_ascii=False, indent=2)
@@ -835,10 +840,22 @@ class CznZeroFarmGUI:
 
         tdir = get_profile_dir(cfg.get("template_profile", "templates_cn"))
         capturer = ScreenCapturer()
+        g = cfg.get("game", {})
+        title = g.get("window_title", "卡厄思梦境")
+        hwnd = ctypes.windll.user32.FindWindowW(None, title)
+        if hwnd:
+            capturer.set_window(hwnd)
+            logging.info(f"锁定游戏窗口: {title} 句柄={hwnd}")
         matcher = TemplateMatcher(tdir)
         detector = StateDetector(matcher)
         sim = InputSimulator(backend=cfg.get("game", {}).get("input_backend", "sendinput"))
         sim.keep_mouse = cfg.get("debug", {}).get("keep_mouse", False)
+        # 坐标变换：点击自动从游戏坐标转屏幕坐标
+        _orig_click_at = sim.click_at
+        def _click_at_wrapper(x, y, sw=1920, sh=1080):
+            sx, sy = capturer.game_to_screen(x, y)
+            _orig_click_at(sx, sy, sw, sh)
+        sim.click_at = _click_at_wrapper
         mission = cfg.get("game", {}).get("mission", "zero_system")
         combat_mod = CombatModule()
         stats = {"runs": 0, "battles": 0, "elites": 0, "floors": 0, "events": 0}
@@ -862,15 +879,20 @@ class CznZeroFarmGUI:
                 pos = (pos[0] + offsets[tpl_name][0], pos[1] + offsets[tpl_name][1])
             sim.click_at(pos[0], pos[1], res[0], res[1])
 
+        retreat_on_first = cfg.get("game", {}).get("retreat_on_first_floor", False)
+        skip_templates = set()
+        if not retreat_on_first:
+            skip_templates.add("retreat")
+
         logging.info(f"=== 开始运行 [配置: {tdir.name}] ===")
 
         while not self._stop_evt.is_set():
             if self._pause_evt.is_set():
                 time.sleep(0.3); continue
             try:
-                frame = capturer.capture()
+                frame = capturer.capture_game_area()
                 res = capturer.get_resolution()
-                state = detector.detect(frame)
+                state = detector.detect(frame, skip_templates)
                 # 状态变化检测
                 if not hasattr(self, '_prev_state'):
                     self._prev_state = None
@@ -1184,7 +1206,7 @@ class CznZeroFarmGUI:
                     sim.click_at(detector.last_pos[0], detector.last_pos[1], res[0], res[1])
                 elif state == GameState.EVENT_SCREEN:
                     stats["events"] += 1
-                    if detector.last_template == "event_fallback":
+                    if detector.last_template in ("event_fallback", "event_fallback2"):
                         logging.info("事件保底")
                         for _ in range(2):
                             sim.click_at(detector.last_pos[0], detector.last_pos[1] - 80, res[0], res[1])
@@ -1203,8 +1225,15 @@ class CznZeroFarmGUI:
                     logging.info("提取奖励")
                     sim.click_at(detector.last_pos[0], detector.last_pos[1], res[0], res[1])
                 elif state == GameState.RETREAT:
-                    logging.info("设置→脱离")
-                    sim.click_at(detector.last_pos[0], detector.last_pos[1], res[0], res[1])
+                    if detector.last_template == "retreat":
+                        logging.info("撤退")
+                        cx, cy = detector.last_pos
+                        sim.click_at(cx + 390, cy - 930, res[0], res[1])
+                        time.sleep(sr_delay)
+                        sim.click_at(cx + 366, cy, res[0], res[1])
+                    else:
+                        logging.info("设置→脱离")
+                        sim.click_at(detector.last_pos[0], detector.last_pos[1], res[0], res[1])
                 elif state == GameState.REMOVE_CARD_EVENT:
                     logging.info("移除卡牌")
                     _click("remove_card_event")
@@ -1249,6 +1278,12 @@ class CznZeroFarmGUI:
                 elif state == GameState.CODEX_COMPLETE:
                     logging.info("完成法典")
                     sim.click_at(detector.last_pos[0], detector.last_pos[1] + 210, res[0], res[1])
+                elif state == GameState.CODEX_OBTAIN:
+                    logging.info("获得法典")
+                    cx, cy = detector.last_pos
+                    sim.click_at(cx, cy + 430, res[0], res[1])
+                    time.sleep(sr_delay)
+                    sim.click_at(cx + 690, cy + 870, res[0], res[1])
                 elif state == GameState.SKIP_LEFTMOST:
                     matches = detector.matcher.match_all(frame, "skip_leftmost", threshold=0.8)
                     if matches:

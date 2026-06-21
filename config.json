@@ -1,7 +1,7 @@
 {
   "_说明": "零式系统自动刷取脚本配置文件",
   "_坐标说明": "所有坐标均为 (x, y) 像素值，基于 1920x1080 分辨率。不同分辨率请按比例缩放。",
-  "template_profile": "templates_cn",
+  "template_profile": "templates_global",
   "_template_profiles": [
     "templates_global",
     "templates_cn"
@@ -15,7 +15,8 @@
     "capture_method": "auto",
     "input_backend": "sendinput",
     "mode": "pc",
-    "mission": "zero_system"
+    "mission": "zero_system",
+    "retreat_on_first_floor": false
   },
   "hotkey": {
     "stop": "f8",

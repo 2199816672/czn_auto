@@ -60,6 +60,7 @@ class GameState(Enum):
     CARD_DUPLICATE = "card_duplicate"
     UNEXPECTED_ROOM = "unexpected_room"
     BOSS_NODE = "boss_node"
+    CODEX_OBTAIN = "codex_obtain"
     UNKNOWN = "unknown"
 
 
@@ -139,16 +140,19 @@ class StateDetector:
         self.last_conf: float = 0.0
         self.history: List[Tuple[float, GameState]] = []
 
-    def detect(self, frame: np.ndarray) -> GameState:
+    def detect(self, frame: np.ndarray, skip_templates: Optional[set] = None) -> GameState:
         thresholds = {
             "auto_battle_off": 0.95,
             "wrong_page": 0.98,
             "codex_btn3": 0.95,
         }
         checks = [
+            ("retreat", GameState.RETREAT),
+            ("retreat_btn", GameState.RETREAT),
             ("auto_battle_off", GameState.AUTO_BATTLE_OFF),
             ("combat_screen", GameState.COMBAT),
             ("combat_victory", GameState.COMBAT_VICTORY),
+            ("codex_obtain", GameState.CODEX_OBTAIN),
             ("confirm_option", GameState.CONFIRM_OPTION),
             ("card_reward", GameState.CARD_REWARD),
             ("wrong_page", GameState.WRONG_PAGE),
@@ -168,6 +172,7 @@ class StateDetector:
             ("event_option", GameState.EVENT_SCREEN),
             ("event_option2", GameState.EVENT_SCREEN),
             ("event_fallback", GameState.EVENT_SCREEN),
+            ("event_fallback2", GameState.EVENT_SCREEN),
             ("event_dice", GameState.EVENT_DICE),
             ("dice_next", GameState.DICE_NEXT),
             ("rest_alt", GameState.REST_SCREEN),
@@ -182,6 +187,7 @@ class StateDetector:
             ("map_screen", GameState.MAP_SCREEN),
             ("boss_node", GameState.BOSS_NODE),
             ("team_enter", GameState.TEAM_ENTER),
+            ("team_enter2", GameState.TEAM_ENTER),
             ("team_confirm", GameState.TEAM_ENTER),
             ("codex_select", GameState.CODEX_SELECT),
             ("codex_synth", GameState.CODEX_SYNTH),
@@ -194,7 +200,6 @@ class StateDetector:
             ("codex_complete2", GameState.CODEX_COMPLETE),
             ("zero_system_entry", GameState.ZERO_SYSTEM_ENTRY),
             ("main_menu", GameState.MAIN_MENU),
-            ("retreat_btn", GameState.RETREAT),
             ("remove_card_event", GameState.REMOVE_CARD_EVENT),
             ("close_view", GameState.CLOSE_VIEW),
             ("continue_forward", GameState.CONTINUE_FORWARD),
@@ -219,6 +224,8 @@ class StateDetector:
             ("card_duplicate", GameState.CARD_DUPLICATE),
         ]
         for tpl_name, state in checks:
+            if skip_templates and tpl_name in skip_templates:
+                continue
             if self.matcher.exists(tpl_name):
                 th = thresholds.get(tpl_name, 0.9)
                 found, conf, pos = self.matcher.match(frame, tpl_name, threshold=th)
