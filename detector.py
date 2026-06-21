@@ -71,9 +71,15 @@ class TemplateMatcher:
         if templates_dir and templates_dir.exists():
             for f in sorted(templates_dir.rglob("*")):
                 if f.is_file() and f.suffix.lower() in (".png", ".jpg", ".jpeg", ".bmp"):
-                    img = cv2.imread(str(f))
+                    img = cv2.imread(str(f), cv2.IMREAD_UNCHANGED)
                     if img is not None:
-                        if len(img.shape) == 3:
+                        if len(img.shape) == 3 and img.shape[2] == 4:
+                            # 有 alpha 通道：透明区域填中性灰，消除背景干扰
+                            alpha = img[:, :, 3]
+                            bgr = img[:, :, :3]
+                            bgr[alpha == 0] = [128, 128, 128]
+                            img = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+                        elif len(img.shape) == 3:
                             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                         self.templates[f.stem] = img
                         logger.info(f"Loaded template [{f.stem}] {img.shape[1]}x{img.shape[0]}")
