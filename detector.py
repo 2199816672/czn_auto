@@ -86,6 +86,8 @@ class TemplateMatcher:
         tpl = self.templates.get(template_name)
         if tpl is None:
             return False, 0.0, None
+        if frame is None or frame.size == 0:
+            return False, 0.0, None
         th = threshold or self.threshold
         if len(frame.shape) == 3:
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -111,6 +113,8 @@ class TemplateMatcher:
                   threshold: Optional[float] = None) -> List[Tuple[float, int, int]]:
         tpl = self.templates.get(template_name)
         if tpl is None:
+            return []
+        if frame is None or frame.size == 0:
             return []
         th = threshold or self.threshold
         if len(frame.shape) == 3:
