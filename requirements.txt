@@ -4,6 +4,7 @@ mss
 Pillow
 keyboard
 dxcam
+windows-capture
 winrt-runtime
 winrt-Windows.Media.Ocr
 winrt-Windows.Globalization

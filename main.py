@@ -5,6 +5,7 @@ import os
 import sys
 import json
 import time
+import ctypes
 import logging
 import threading
 import datetime
@@ -15,13 +16,17 @@ from typing import Optional
 import cv2
 import keyboard
 
-from capture import ScreenCapturer
-from controller import InputSimulator
+from core.screencap import CaptureMethod, ScreenCapturer
+from core.input import InputSimulator
 from detector import TemplateMatcher, StateDetector, GameState
 from combat import CombatModule
 
 # --- Paths ---
-BASE_DIR = Path(__file__).parent
+# 打包成 exe(冻结)后，资源/配置应位于 exe 同目录，便于用户编辑与采集模板
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(sys.executable).parent
+else:
+    BASE_DIR = Path(__file__).parent
 CONFIG_PATH = BASE_DIR / "config.json"
 LOGS_DIR = BASE_DIR / "logs"
 DEBUG_DIR = BASE_DIR / "debug"
@@ -325,7 +330,10 @@ def main():
     if "--capture" in sys.argv:
         setup_logging()
         config = Config(CONFIG_PATH)
-        cap = ScreenCapturer()
+        cap = ScreenCapturer(method=config.raw.get("game", {}).get("capture_method", CaptureMethod.DEFAULT.value))
+        hwnd = ctypes.windll.user32.FindWindowW(None, config.window_title)
+        if hwnd:
+            cap.set_window(hwnd)
         template_capture_loop(cap)
         return
 
@@ -343,7 +351,11 @@ def main():
     logger.info("CZN Zero Farm v1.0")
 
     tdir = _get_templates_dir()
-    capturer = ScreenCapturer()
+    capturer = ScreenCapturer(method=config.raw.get("game", {}).get("capture_method", CaptureMethod.DEFAULT.value))
+    hwnd = ctypes.windll.user32.FindWindowW(None, config.window_title)
+    if hwnd:
+        capturer.set_window(hwnd)
+        logger.info(f"锁定游戏窗口: {config.window_title} 句柄={hwnd} 捕获方式={capturer.method}")
     matcher = TemplateMatcher(tdir)
     detector = StateDetector(matcher)
     sim = InputSimulator(backend=config.raw.get("game", {}).get("input_backend", "sendinput"))

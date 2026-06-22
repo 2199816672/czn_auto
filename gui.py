@@ -18,7 +18,11 @@ from tkinter import messagebox
 
 import cv2
 
-BASE_DIR = Path(__file__).parent
+# 打包成 exe(冻结)后，资源/配置应位于 exe 同目录，便于用户编辑与采集模板
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(sys.executable).parent
+else:
+    BASE_DIR = Path(__file__).parent
 
 
 def imwrite_unicode(path, img):
@@ -30,10 +34,10 @@ def imwrite_unicode(path, img):
     return False
 sys.path.insert(0, str(BASE_DIR))
 
-from capture import ScreenCapturer
-from controller import InputSimulator
+from core.input import InputSimulator
 from detector import TemplateMatcher, StateDetector, GameState
 from combat import CombatModule
+from core.screencap import AVAILABLE_METHODS, CaptureMethod, ScreenCapturer
 
 CONFIG_PATH = BASE_DIR / "config.json"
 LOGS_DIR = BASE_DIR / "logs"
@@ -286,18 +290,35 @@ class ConfigDialog(tk.Toplevel):
             self.input_backend_var.set(backend_reverse.get(self.input_backend_display.get(), "sendmessage"))
         input_cb.bind("<<ComboboxSelected>>", _sync_backend)
 
-        self.keep_mouse_var = tk.BooleanVar(value=self.cfg.get("debug", {}).get("keep_mouse", False))
-        ttk.Label(mf, text="调试模式:", foreground=COLOR_ACCENT).grid(row=4, column=0, padx=10, pady=(15, 2), sticky="w")
-        tk.Checkbutton(mf, text="鼠标不归位", variable=self.keep_mouse_var, bg=COLOR_CARD, fg=COLOR_TEXT, selectcolor=COLOR_CARD, activebackground=COLOR_CARD, activeforeground=COLOR_TEXT).grid(row=4, column=1, padx=5, pady=(15, 2), sticky="w")
+        ttk.Label(mf, text="捕获方式:", foreground=COLOR_ACCENT).grid(row=4, column=0, padx=10, pady=(15, 2), sticky="w")
+        self.capture_method_var = tk.StringVar(value=self.cfg.get("game", {}).get("capture_method", CaptureMethod.DEFAULT.value))
+        capture_display = dict(AVAILABLE_METHODS)
+        capture_reverse = {v: k for k, v in capture_display.items()}
+        self.capture_method_display = tk.StringVar(value=capture_display.get(self.capture_method_var.get(), capture_display[CaptureMethod.DEFAULT.value]))
+        capture_cb = ttk.Combobox(mf, textvariable=self.capture_method_display,
+                                  values=list(capture_display.values()),
+                                  width=30, state="readonly")
+        capture_cb.grid(row=4, column=1, padx=5, pady=(15, 2), sticky="w")
+        def _sync_capture(event):
+            self.capture_method_var.set(capture_reverse.get(self.capture_method_display.get(), CaptureMethod.DEFAULT.value))
+        capture_cb.bind("<<ComboboxSelected>>", _sync_capture)
+        ToolTip(capture_cb, "屏幕捕获方式\n"
+                            "自动(DXGI): 最快，前台运行；窗口被遮挡/最小化会截图失败\n"
+                            "FramePool: 支持后台/被遮挡截图，需 Win10 1903+\n"
+                            "PrintWindow: 支持后台/被遮挡截图，部分画面可能黑屏")
 
-        ttk.Separator(mf, orient="horizontal").grid(row=5, column=0, columnspan=2, sticky="ew", pady=10, padx=10)
+        self.keep_mouse_var = tk.BooleanVar(value=self.cfg.get("debug", {}).get("keep_mouse", False))
+        ttk.Label(mf, text="调试模式:", foreground=COLOR_ACCENT).grid(row=5, column=0, padx=10, pady=(15, 2), sticky="w")
+        tk.Checkbutton(mf, text="鼠标不归位", variable=self.keep_mouse_var, bg=COLOR_CARD, fg=COLOR_TEXT, selectcolor=COLOR_CARD, activebackground=COLOR_CARD, activeforeground=COLOR_TEXT).grid(row=5, column=1, padx=5, pady=(15, 2), sticky="w")
+
+        ttk.Separator(mf, orient="horizontal").grid(row=6, column=0, columnspan=2, sticky="ew", pady=10, padx=10)
         self.codex_btn1_var = tk.BooleanVar(value=self.cfg.get("codex_use_btn1", True))
-        ttk.Label(mf, text="法典合成:", foreground=COLOR_ACCENT).grid(row=6, column=0, padx=10, pady=(5, 10), sticky="w")
-        tk.Checkbutton(mf, text="使用卡厄斯宝珠 (codex_btn1)", variable=self.codex_btn1_var, bg=COLOR_CARD, fg=COLOR_TEXT, selectcolor=COLOR_CARD, activebackground=COLOR_CARD, activeforeground=COLOR_TEXT).grid(row=6, column=1, padx=5, pady=(5, 10), sticky="w")
+        ttk.Label(mf, text="法典合成:", foreground=COLOR_ACCENT).grid(row=7, column=0, padx=10, pady=(5, 10), sticky="w")
+        tk.Checkbutton(mf, text="使用卡厄斯宝珠 (codex_btn1)", variable=self.codex_btn1_var, bg=COLOR_CARD, fg=COLOR_TEXT, selectcolor=COLOR_CARD, activebackground=COLOR_CARD, activeforeground=COLOR_TEXT).grid(row=7, column=1, padx=5, pady=(5, 10), sticky="w")
 
         self.retreat_var = tk.BooleanVar(value=self.cfg.get("game", {}).get("retreat_on_first_floor", False))
-        ttk.Label(mf, text="仅推一层:", foreground=COLOR_ACCENT).grid(row=7, column=0, padx=10, pady=(5, 10), sticky="w")
-        tk.Checkbutton(mf, text="推完一层后撤退", variable=self.retreat_var, bg=COLOR_CARD, fg=COLOR_TEXT, selectcolor=COLOR_CARD, activebackground=COLOR_CARD, activeforeground=COLOR_TEXT).grid(row=7, column=1, padx=5, pady=(5, 10), sticky="w")
+        ttk.Label(mf, text="仅推一层:", foreground=COLOR_ACCENT).grid(row=8, column=0, padx=10, pady=(5, 10), sticky="w")
+        tk.Checkbutton(mf, text="推完一层后撤退", variable=self.retreat_var, bg=COLOR_CARD, fg=COLOR_TEXT, selectcolor=COLOR_CARD, activebackground=COLOR_CARD, activeforeground=COLOR_TEXT).grid(row=8, column=1, padx=5, pady=(5, 10), sticky="w")
 
         # 路线优先级 tab
         rf = ttk.Frame(nb); nb.add(rf, text="路线优先级")
@@ -436,6 +457,7 @@ class ConfigDialog(tk.Toplevel):
         self.cfg.setdefault("game", {})["mode"] = self.mode_var.get()
         self.cfg["game"]["mission"] = self.mission_var.get()
         self.cfg["game"]["input_backend"] = self.input_backend_var.get()
+        self.cfg["game"]["capture_method"] = self.capture_method_var.get()
         self.cfg.setdefault("ocr", {})["entry_keywords"] = [s.strip() for s in self.ocr_entry_kw.get().split(",") if s.strip()]
         self.cfg["ocr"]["keyword"] = self.ocr_keyword.get()
         self.cfg["ocr"]["exit_keywords"] = [s.strip() for s in self.ocr_exit_kw.get().split(",") if s.strip()]
@@ -754,8 +776,19 @@ class CznZeroFarmGUI:
     def capture_mode(self):
         tdir = self._get_templates_dir()
         tdir.mkdir(parents=True, exist_ok=True)
-        cap = ScreenCapturer()
-        logging.info(f"=== 模板采集模式 [{self.profile_var.get()}] ===")
+        method, title = CaptureMethod.DEFAULT.value, "卡厄思梦境"
+        try:
+            with open(CONFIG_PATH, encoding="utf-8") as f:
+                _g = json.load(f).get("game", {})
+                method = _g.get("capture_method", CaptureMethod.DEFAULT.value)
+                title = _g.get("window_title", title)
+        except Exception:
+            pass
+        cap = ScreenCapturer(method=method)
+        _hwnd = ctypes.windll.user32.FindWindowW(None, title)
+        if _hwnd:
+            cap.set_window(_hwnd)
+        logging.info(f"=== 模板采集模式 [{self.profile_var.get()}] 捕获方式={method} ===")
         logging.info(f"目录 {tdir}")
         logging.info("F7=保存截图  Esc=退出")
         cnt = [0]
@@ -788,17 +821,21 @@ class CznZeroFarmGUI:
 
         tdir = self._get_templates_dir()
         tdir.mkdir(parents=True, exist_ok=True)
-        cap = ScreenCapturer()
-        matcher = TemplateMatcher(tdir)
-        detector = StateDetector(matcher)
 
         with open(CONFIG_PATH, encoding="utf-8") as f:
             cfg = json.load(f)
+        method = cfg.get("game", {}).get("capture_method", CaptureMethod.DEFAULT.value)
+        cap = ScreenCapturer(method=method)
+        matcher = TemplateMatcher(tdir)
+        detector = StateDetector(matcher)
+
         title = cfg.get("game", {}).get("window_title", "卡厄思梦境")
         hwnd = user32.FindWindowW(None, title)
+        if hwnd:
+            cap.set_window(hwnd)
 
         logging.info("=" * 40)
-        logging.info(f"诊断模式 [{self.profile_var.get()}]")
+        logging.info(f"诊断模式 [{self.profile_var.get()}] 捕获方式={method}")
 
         if hwnd:
             rect = ctypes.wintypes.RECT()
@@ -839,13 +876,13 @@ class CznZeroFarmGUI:
         sc.timing = cfg["timing"]
 
         tdir = get_profile_dir(cfg.get("template_profile", "templates_cn"))
-        capturer = ScreenCapturer()
+        capturer = ScreenCapturer(method=cfg.get("game", {}).get("capture_method", CaptureMethod.DEFAULT.value))
         g = cfg.get("game", {})
         title = g.get("window_title", "卡厄思梦境")
         hwnd = ctypes.windll.user32.FindWindowW(None, title)
         if hwnd:
             capturer.set_window(hwnd)
-            logging.info(f"锁定游戏窗口: {title} 句柄={hwnd}")
+            logging.info(f"锁定游戏窗口: {title} 句柄={hwnd} 捕获方式={capturer.method}")
         matcher = TemplateMatcher(tdir)
         detector = StateDetector(matcher)
         sim = InputSimulator(backend=cfg.get("game", {}).get("input_backend", "sendinput"))
