@@ -1,0 +1,35 @@
+---
+description: 项目结构与架构概览（CZN Zero Farm 卡厄思梦境零式自动刷取脚本）
+alwaysApply: true
+---
+
+# 项目概览
+
+**CZN Zero Farm** 是《卡厄思梦境》PC 端自动化刷取脚本。纯 OpenCV 模板匹配 + 状态机驱动，无 AI 模型 / 无 GPU，仅支持 Windows，基于 1920×1080 分辨率坐标（按比例缩放）。
+
+# 模块结构
+
+| 文件 | 职责 |
+|---|---|
+| `main.py` | CLI 主入口。`Config` 加载配置、日志、热键、主循环 `main_loop`、状态分发 `handle_state`、`--capture` 模板采集模式 |
+| `gui.py` | MAA 风格暗色 GUI 主入口（双击 `run.bat` 或 `python gui.py` 启动），含配置编辑、实时统计、高 DPI 适配 |
+| `capture.py` | `ScreenCapturer`：基于 `dxcam` 截屏，窗口定位与分辨率缩放 |
+| `controller.py` | `InputSimulator`：Windows 输入模拟，三种后端 `sendinput`（前台）/ `sendmessage`（后台）/ `postmessage`（不碰鼠标） |
+| `detector.py` | `GameState` 枚举（60+ 状态）、`TemplateMatcher` 模板匹配（阈值 0.8）、`StateDetector` 状态检测 |
+| `combat.py` | `CombatModule`：战斗自动出牌逻辑（轮廓分析识别手牌） |
+| `ocr.py` | OCR 后端（PaddleOCR / WinRT），用于「赛季图初始刷取」模式按关键词刷 Buff |
+| `config.json` | 全部运行配置：坐标点、点击偏移、时序、OCR 关键词、模板 profile 等 |
+| `templates_cn/`、`templates_global/` | 国服 / 国际服模板图片（PNG），由 `config.json` 的 `template_profile` 切换 |
+
+# 核心架构
+
+- **状态机循环**：`main_loop` 截屏 → `StateDetector.detect` 识别 `GameState` → `handle_state` 根据状态点击对应 `click_points`。
+- **坐标驱动**：所有点击坐标来自 `config.json` 的 `click_points` / `click_offsets`，基于 1920×1080，运行时按实际分辨率缩放。修改行为优先改配置而非硬编码坐标。
+- **两种模式**（`config.json` 的 `game.mission`）：`zero_system`（完整刷层状态机）与赛季图 OCR 刷 Buff。
+- **热键**：F6 开始 / F8 停止 / F9 暂停（需管理员权限）。
+
+# 约定
+
+- 坐标格式：`[x, y]` 像素；区域格式：`[x, y, w, h]`。
+- 新增游戏画面识别：在 `GameState` 加枚举 → `templates_*/` 加模板图 → `handle_state` 加分支 → `config.json` 加坐标。
+- 代码注释与日志混用中英文，保持现有风格；面向用户的文档用简体中文。

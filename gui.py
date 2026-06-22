@@ -237,7 +237,7 @@ class ConfigDialog(tk.Toplevel):
 
         sf = ttk.Frame(nb); nb.add(sf, text="服务器")
         ttk.Label(sf, text="当前服务器:", width=20, anchor="w").grid(row=0, column=0, padx=5, pady=10, sticky="w")
-        self.server_var = tk.StringVar(value="" if self.cfg.get("template_profile") == "templates_cn" else "国际服")
+        self.server_var = tk.StringVar(value="国服" if self.cfg.get("template_profile") == "templates_cn" else "国际服")
         server_cb = ttk.Combobox(sf, textvariable=self.server_var,
                                   values=["国际服", "国服"],
                                   width=12, state="readonly")
