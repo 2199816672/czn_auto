@@ -34,11 +34,10 @@ def imwrite_unicode(path, img):
     return False
 sys.path.insert(0, str(BASE_DIR))
 
-from capture import ScreenCapturer
 from controller import InputSimulator
 from detector import TemplateMatcher, StateDetector, GameState
 from combat import CombatModule
-from core.screencap import AVAILABLE_METHODS, CaptureMethod
+from core.screencap import AVAILABLE_METHODS, CaptureMethod, ScreenCapturer
 
 CONFIG_PATH = BASE_DIR / "config.json"
 LOGS_DIR = BASE_DIR / "logs"

@@ -18,6 +18,7 @@ __all__ = [
     "create_backend",
     "get_window_title",
     "AVAILABLE_METHODS",
+    "ScreenCapturer",
 ]
 
 # 供 GUI 下拉框使用：内部值 -> 显示名
@@ -50,3 +51,7 @@ def create_backend(method: "Union[str, CaptureMethod, None]") -> ScreencapBacken
 
     # auto / dxgi / 其它
     return DXGIBackend()
+
+
+# 末尾导入避免与 create_backend 形成循环导入
+from .capturer import ScreenCapturer  # noqa: E402

@@ -13,8 +13,7 @@ alwaysApply: true
 |---|---|
 | `main.py` | CLI 主入口。`Config` 加载配置、日志、热键、主循环 `main_loop`、状态分发 `handle_state`、`--capture` 模板采集模式 |
 | `gui.py` | MAA 风格暗色 GUI 主入口（双击 `run.bat` 或 `python gui.py` 启动），含配置编辑、实时统计、高 DPI 适配 |
-| `capture.py` | `ScreenCapturer` 门面：按 `capture_method` 选择捕获后端，窗口定位、裁剪与分辨率缩放 |
-| `core/screencap/` | 屏幕捕获后端包：`base.py`（抽象基类 `ScreencapBackend`）、`dxgi.py`（dxcam/DXGI 桌面复制，前台）、`framepool.py`（WinRT FramePool，后台/遮挡可截，依赖 `windows-capture`）、`printwindow.py`（GDI PrintWindow，后台/遮挡可截）、`__init__.py`（`create_backend` 工厂 + `AVAILABLE_METHODS`） |
+| `core/screencap/` | 屏幕捕获包：`capturer.py`（`ScreenCapturer` 门面，按 `capture_method` 选择捕获后端，窗口定位、裁剪与分辨率缩放）、`base.py`（抽象基类 `ScreencapBackend`）、`dxgi.py`（dxcam/DXGI 桌面复制，前台）、`framepool.py`（WinRT FramePool，后台/遮挡可截，依赖 `windows-capture`）、`printwindow.py`（GDI PrintWindow，后台/遮挡可截）、`__init__.py`（`create_backend` 工厂 + `AVAILABLE_METHODS` + 重新导出 `ScreenCapturer`） |
 | `controller.py` | `InputSimulator`：Windows 输入模拟，三种后端 `sendinput`（前台）/ `sendmessage`（后台）/ `postmessage`（不碰鼠标） |
 | `detector.py` | `GameState` 枚举（60+ 状态）、`TemplateMatcher` 模板匹配（阈值 0.8）、`StateDetector` 状态检测 |
 | `combat.py` | `CombatModule`：战斗自动出牌逻辑（轮廓分析识别手牌） |

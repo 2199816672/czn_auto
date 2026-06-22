@@ -6,7 +6,8 @@ from typing import Tuple
 import cv2
 import numpy as np
 
-from core.screencap import CaptureMethod, create_backend
+from .base import CaptureMethod
+from . import create_backend
 
 
 class ScreenCapturer:

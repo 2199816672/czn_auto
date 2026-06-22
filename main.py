@@ -16,8 +16,7 @@ from typing import Optional
 import cv2
 import keyboard
 
-from capture import ScreenCapturer
-from core.screencap import CaptureMethod
+from core.screencap import CaptureMethod, ScreenCapturer
 from controller import InputSimulator
 from detector import TemplateMatcher, StateDetector, GameState
 from combat import CombatModule
