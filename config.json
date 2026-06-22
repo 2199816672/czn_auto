@@ -12,7 +12,7 @@
       1920,
       1080
     ],
-    "capture_method": "framepool",
+    "capture_method": "auto",
     "input_backend": "sendinput",
     "mode": "pc",
     "mission": "zero_system",

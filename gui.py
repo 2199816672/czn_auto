@@ -18,6 +18,8 @@ from tkinter import messagebox
 
 import cv2
 
+VERSION = "v1.7"
+
 # 打包成 exe(冻结)后，资源/配置应位于 exe 同目录，便于用户编辑与采集模板
 if getattr(sys, "frozen", False):
     BASE_DIR = Path(sys.executable).parent
@@ -486,7 +488,7 @@ class ConfigDialog(tk.Toplevel):
 class CznZeroFarmGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("CZN Zero Farm - 零式系统自动刷取")
+        self.root.title(f"CZN Zero Farm {VERSION} - 零式系统自动刷取")
         self.root.geometry("1200x800")
         self.root.minsize(1000, 680)
         self.root.configure(bg=COLOR_BG)
