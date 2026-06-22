@@ -1,5 +1,6 @@
 import json
 import logging
+import sys
 from pathlib import Path
 from typing import List, Tuple
 
@@ -42,7 +43,13 @@ class InputSimulator:
         self.backend.set_window(hwnd)
 
     def _find_window(self) -> int:
-        cfg_path = Path(__file__).resolve().parents[2] / "config.json"
+        cfg_path = None
+        if getattr(sys, "frozen", False):
+            cfg_path = Path(sys.executable).parent / "config.json"
+            if not cfg_path.exists():
+                cfg_path = Path(sys._MEIPASS) / "config.json"
+        else:
+            cfg_path = Path(__file__).resolve().parents[2] / "config.json"
         title = "卡厄思梦境"
         if cfg_path.exists():
             try:

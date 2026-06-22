@@ -42,6 +42,7 @@ class GameState(Enum):
     SKIP_LEFTMOST = "skip_leftmost"
     CARD_REWARD_SKIP = "card_reward_skip"
     AUTO_BATTLE_OFF = "auto_battle_off"
+    AUTO_BATTLE_ON = "auto_battle_on"
     INSPIRATION_CARD = "inspiration_card"
     CARD_CONVERT = "card_convert"
     EVENT_DICE = "event_dice"
@@ -69,7 +70,7 @@ class GameState(Enum):
 class TemplateMatcher:
     def __init__(self, templates_dir: Path):
         self.templates: dict[str, np.ndarray] = {}
-        self.threshold = 0.8
+        self.threshold = 0.9
         if templates_dir and templates_dir.exists():
             for f in sorted(templates_dir.rglob("*")):
                 if f.is_file() and f.suffix.lower() in (".png", ".jpg", ".jpeg", ".bmp"):
@@ -100,11 +101,11 @@ class TemplateMatcher:
         h, w = tpl_gray.shape[:2]
         res = cv2.matchTemplate(frame_gray, tpl_gray, cv2.TM_CCOEFF_NORMED)
         _, max_val, _, max_loc = cv2.minMaxLoc(res)
+        cx = max_loc[0] + w // 2
+        cy = max_loc[1] + h // 2
         if max_val >= th:
-            cx = max_loc[0] + w // 2
-            cy = max_loc[1] + h // 2
             return True, float(max_val), (cx, cy)
-        return False, float(max_val), None
+        return False, float(max_val), (cx, cy)
 
     def exists(self, name: str) -> bool:
         return name in self.templates
@@ -144,6 +145,11 @@ class StateDetector:
         self.last_pos: Optional[Tuple[int, int]] = None
         self.last_template: Optional[str] = None
         self.last_conf: float = 0.0
+        self.best_template: Optional[str] = None
+        self.best_conf: float = 0.0
+        self.best_pos: Optional[Tuple[int, int]] = None
+        self.best_state: Optional[GameState] = None
+        self.template_state_map: dict[str, GameState] = {}
         self.history: List[Tuple[float, GameState]] = []
 
     def detect(self, frame: np.ndarray, skip_templates: Optional[set] = None) -> GameState:
@@ -151,10 +157,12 @@ class StateDetector:
             "auto_battle_off": 0.95,
             "wrong_page": 0.98,
             "codex_btn3": 0.95,
+            "team_enter2": 0.7,
         }
         checks = [
             ("retreat", GameState.RETREAT),
             ("auto_battle_off", GameState.AUTO_BATTLE_OFF),
+            ("auto_battle_on", GameState.AUTO_BATTLE_ON),
             ("combat_screen", GameState.COMBAT),
             ("combat_victory", GameState.COMBAT_VICTORY),
             ("codex_obtain", GameState.CODEX_OBTAIN),
@@ -232,10 +240,11 @@ class StateDetector:
             ("card_duplicate", GameState.CARD_DUPLICATE),
         ]
         for tpl_name, state in checks:
+            self.template_state_map[tpl_name] = state
             if skip_templates and tpl_name in skip_templates:
                 continue
             if self.matcher.exists(tpl_name):
-                th = thresholds.get(tpl_name, 0.8)
+                th = thresholds.get(tpl_name, 0.9)
                 found, conf, pos = self.matcher.match(frame, tpl_name, threshold=th)
                 if found:
                     logger.debug(f"State: {state.value} (conf={conf:.3f})")
@@ -250,6 +259,23 @@ class StateDetector:
         fallback = self._fallback_detect(frame)
         if fallback != GameState.UNKNOWN:
             return fallback
+        # UNKNOWN：全量扫描找出全局最高可信度（最低 0.6）
+        self.best_template = None
+        self.best_conf = 0.0
+        self.best_pos = None
+        self.best_state = None
+        for tpl_name, state in checks:
+            if tpl_name == "retreat":
+                continue
+            if skip_templates and tpl_name in skip_templates:
+                continue
+            if self.matcher.exists(tpl_name):
+                _, conf, pos = self.matcher.match(frame, tpl_name, threshold=0.0)
+                if conf > self.best_conf and conf >= 0.6:
+                    self.best_conf = conf
+                    self.best_template = tpl_name
+                    self.best_pos = pos
+                    self.best_state = state
         logger.debug("State: unknown")
         self.last_state = GameState.UNKNOWN
         return GameState.UNKNOWN

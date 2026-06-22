@@ -20,11 +20,32 @@ import cv2
 
 VERSION = "v1.7"
 
-# 打包成 exe(冻结)后，资源/配置应位于 exe 同目录，便于用户编辑与采集模板
 if getattr(sys, "frozen", False):
     BASE_DIR = Path(sys.executable).parent
+    _MEIPASS_DIR = Path(sys._MEIPASS)
 else:
     BASE_DIR = Path(__file__).parent
+    _MEIPASS_DIR = BASE_DIR
+
+CONFIG_PATH = BASE_DIR / "config.json"
+# 打包后若 exe 同目录无 config.json，从内置资源复制一份（首次运行）
+if getattr(sys, "frozen", False) and not CONFIG_PATH.exists():
+    src = _MEIPASS_DIR / "config.json"
+    if src.exists():
+        import shutil
+        shutil.copy2(str(src), str(CONFIG_PATH))
+
+
+def _res_path(rel: str) -> Path:
+    """优先 exe 同目录（可编辑），回退到内置资源"""
+    p = BASE_DIR / rel
+    if p.exists():
+        return p
+    if getattr(sys, "frozen", False):
+        mp = _MEIPASS_DIR / rel
+        if mp.exists():
+            return mp
+    return p
 
 
 def imwrite_unicode(path, img):
@@ -41,7 +62,6 @@ from detector import TemplateMatcher, StateDetector, GameState
 from combat import CombatModule
 from core.screencap import AVAILABLE_METHODS, CaptureMethod, ScreenCapturer
 
-CONFIG_PATH = BASE_DIR / "config.json"
 LOGS_DIR = BASE_DIR / "logs"
 
 PROFILES = ["templates_cn", "templates_global"]
@@ -63,10 +83,10 @@ COLOR_BORDER = "#3e3e42"
 
 def get_profile_dir(name=None):
     if name:
-        return BASE_DIR / name
+        return _res_path(name)
     with open(CONFIG_PATH, encoding="utf-8") as f:
         cfg = json.load(f)
-    return BASE_DIR / cfg.get("template_profile", "templates_global")
+    return _res_path(cfg.get("template_profile", "templates_global"))
 
 
 class TextHandler(logging.Handler):
@@ -1059,12 +1079,36 @@ class CznZeroFarmGUI:
 
                 if state == GameState.UNKNOWN:
                     unknown_cnt += 1
-                    if unknown_cnt >= 50:
-                        logging.warning(f"{unknown_cnt}次未知状态")
-                        unknown_cnt = 0
-                    time.sleep(sr_delay)
-                    continue
-                unknown_cnt = 0; t = sc.timing
+                    if detector.best_state is not None:
+                        state = detector.best_state
+                        detector.last_state = state
+                        detector.last_pos = detector.best_pos
+                        detector.last_template = detector.best_template
+                        detector.last_conf = detector.best_conf
+                        logging.info(f"UNKNOWN #{unknown_cnt} 最佳匹配: {detector.best_template} ({detector.best_conf:.3f}) → 走 {state.value}")
+                        if unknown_cnt >= 10:
+                            logging.warning(f"连续{unknown_cnt}次未知，保存调试截图")
+                            import cv2
+                            debug_dir = Path(BASE_DIR, "debug")
+                            debug_dir.mkdir(exist_ok=True)
+                            ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                            path = str(debug_dir / f"unknown_best_{ts}.png")
+                            if detector.best_pos:
+                                ann = frame.copy()
+                                x, y = detector.best_pos
+                                cv2.circle(ann, (x, y), 10, (0,0,255), 2)
+                                cv2.putText(ann, f"{detector.best_template} {detector.best_conf:.3f}",
+                                            (x+15, y-5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,255), 2)
+                                cv2.imwrite(path, ann)
+                                logging.info(f"调试截图: {path}")
+                            unknown_cnt = 0
+                    else:
+                        logging.info(f"UNKNOWN #{unknown_cnt} 无任何匹配")
+                        time.sleep(sr_delay)
+                        continue
+                else:
+                    unknown_cnt = 0
+                t = sc.timing
 
                 settlement_tpls = ["settlement_click", "dismantle_confirm", "settlement_confirm", "dismantle_equip", "node_settlement", "next_step"]
 
@@ -1172,7 +1216,7 @@ class CznZeroFarmGUI:
                     rooms = [(r, i) for i, r in enumerate(room_order)] + [("boss_node", 99), ("room_fallback", 100)]
                     clicked = False
                     for name, _ in rooms:
-                        found, conf, pos = detector.matcher.match(frame, name, threshold=0.8)
+                        found, conf, pos = detector.matcher.match(frame, name, threshold=0.9)
                         if found:
                             logging.info(f"{name} ({conf:.2f})")
                             if name == "room_fallback":
@@ -1336,7 +1380,7 @@ class CznZeroFarmGUI:
                     logging.info("确认图鉴")
                     sim.click_at(detector.last_pos[0], detector.last_pos[1], res[0], res[1])
                 elif state == GameState.SKIP_LEFTMOST:
-                    matches = detector.matcher.match_all(frame, "skip_leftmost", threshold=0.8)
+                    matches = detector.matcher.match_all(frame, "skip_leftmost", threshold=0.9)
                     if matches:
                         _, cx, cy = matches[0]
                         detector.last_pos = (cx, cy)
@@ -1348,6 +1392,8 @@ class CznZeroFarmGUI:
                 elif state == GameState.AUTO_BATTLE_OFF:
                     logging.info("关闭自动战斗")
                     sim.click_at(detector.last_pos[0], detector.last_pos[1], res[0], res[1])
+                elif state == GameState.AUTO_BATTLE_ON:
+                    logging.info("正在自动战斗")
                 elif state == GameState.WRONG_PAGE:
                     logging.info("误入其他页面")
                     _click("wrong_page")
