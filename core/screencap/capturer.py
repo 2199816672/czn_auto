@@ -100,6 +100,12 @@ class ScreenCapturer:
         # 窗口型后端：grab() 已是整窗口画面，裁剪出客户区（不缩放）
         if getattr(self.backend, "returns_window_only", False):
             crop = self._crop_client(frame, client_size)
+            # 窗口最小化时客户区为 0x0，裁剪结果可能为空帧；兜底返回空白基准帧，
+            # 避免空图传给 cv2.cvtColor 触发 (-215:Assertion failed) !_src.empty()
+            if crop is None or crop.size == 0 or crop.shape[0] == 0 or crop.shape[1] == 0:
+                logging.debug(f"[{self.backend.name}] 客户区为空（窗口可能已最小化），返回空白帧")
+                self.last_resolution = (self.BASE_W, self.BASE_H)
+                return np.zeros((self.BASE_H, self.BASE_W, 3), dtype=np.uint8)
             self.last_resolution = (crop.shape[1], crop.shape[0])
             logging.debug(f"[{self.backend.name}] 裁剪客户区 {frame.shape[1]}x{frame.shape[0]} -> {crop.shape[1]}x{crop.shape[0]}")
             return crop
@@ -112,7 +118,12 @@ class ScreenCapturer:
                 frame = cv2.resize(frame, (self.BASE_W, self.BASE_H))
             return frame
         l, t, r, b = win_rect
-        crop = frame[t:b, l:r]
+        crop = frame[max(0, t):max(0, b), max(0, l):max(0, r)]
+        # 窗口最小化时坐标离屏（如 -32000），裁剪结果为空；兜底返回空白基准帧
+        if crop is None or crop.size == 0 or crop.shape[0] == 0 or crop.shape[1] == 0:
+            logging.debug(f"[{self.backend.name}] 裁剪为空（窗口可能已最小化），返回空白帧")
+            self.last_resolution = (self.BASE_W, self.BASE_H)
+            return np.zeros((self.BASE_H, self.BASE_W, 3), dtype=np.uint8)
         logging.debug(f"[{self.backend.name}] 按窗口裁剪 {win_rect} -> {crop.shape[1]}x{crop.shape[0]}")
         if crop.shape[1] != self.BASE_W or crop.shape[0] != self.BASE_H:
             crop = cv2.resize(crop, (self.BASE_W, self.BASE_H))

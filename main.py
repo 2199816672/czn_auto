@@ -16,6 +16,16 @@ from typing import Optional
 import cv2
 import keyboard
 
+# 进程级 DPI 感知：必须在任何窗口/截图调用之前设置，保证 GetWindowRect、
+# GetSystemMetrics 与截图后端统一使用物理像素（否则高 DPI 屏下坐标错位）。
+try:
+    ctypes.windll.shcore.SetProcessDpiAwareness(2)  # PER_MONITOR_DPI_AWARE
+except Exception:
+    try:
+        ctypes.windll.user32.SetProcessDPIAware()
+    except Exception:
+        pass
+
 from core.screencap import CaptureMethod, ScreenCapturer
 from core.input import InputSimulator
 from detector import TemplateMatcher, StateDetector, GameState
