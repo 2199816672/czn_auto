@@ -33,14 +33,23 @@ class DXGIBackend(ScreencapBackend):
             self.camera = self._create_camera()
             if self.camera is None:
                 return None
-        img = self.camera.grab()
-        if img is None:
+        import time
+        for attempt in range(6):
             img = self.camera.grab()
-        if img is None:
-            logging.warning("DXGI 截图失败，重建 dxcam 实例")
-            self.close()
-            return None
-        return img
+            if img is not None:
+                return img
+            if attempt < 2:
+                continue  # 前2次快速重试
+            if attempt == 2:
+                logging.warning("DXGI 连续失败，重建 dxcam 实例")
+                self.close()
+                self.camera = self._create_camera()
+                if self.camera is None:
+                    return None
+            time.sleep(0.3)
+        logging.warning("DXGI 最终放弃")
+        self.close()
+        return None
 
     def close(self):
         if self.camera is not None:

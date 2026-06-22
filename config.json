@@ -12,11 +12,11 @@
       1920,
       1080
     ],
-    "capture_method": "auto",
+    "capture_method": "framepool",
     "input_backend": "sendinput",
     "mode": "pc",
     "mission": "zero_system",
-    "retreat_on_first_floor": false
+    "retreat_on_first_floor": true
   },
   "hotkey": {
     "stop": "f8",
