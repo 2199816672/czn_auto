@@ -28,8 +28,8 @@ except Exception:
 
 from core.screencap import CaptureMethod, ScreenCapturer
 from core.input import InputSimulator
-from detector import TemplateMatcher, StateDetector, GameState
-from combat import CombatModule
+from core.matcher import TemplateMatcher, StateDetector, GameState, load_pixel_checks
+from core.combat import CombatModule
 
 # --- Paths ---
 # 打包成 exe(冻结)后，资源/配置应位于 exe 同目录，便于用户编辑与采集模板
@@ -367,7 +367,7 @@ def main():
         capturer.set_window(hwnd)
         logger.info(f"锁定游戏窗口: {config.window_title} 句柄={hwnd} 捕获方式={capturer.method}")
     matcher = TemplateMatcher(tdir)
-    detector = StateDetector(matcher)
+    detector = StateDetector(matcher, load_pixel_checks(config.raw.get("template_profile")))
     sim = InputSimulator(backend=config.raw.get("game", {}).get("input_backend", "sendinput"))
     combat_mod = CombatModule()
     stats = RunStats()
