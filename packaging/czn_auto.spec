@@ -47,6 +47,8 @@ except Exception:
 datas += [(os.path.join(ROOT, "core", "gui", "assets", "*"), "core/gui/assets")]
 # 应用图标（运行时窗口/任务栏图标；exe 本体图标见下方 EXE 的 icon 参数）
 datas += [(ICON_FILE, ".")]
+# config.json 首次运行自动复制到 exe 同目录
+datas += [(os.path.join(ROOT, "config.json"), ".")]
 
 # windows_capture / winrt 含原生扩展，收集其动态库
 binaries = []
@@ -92,7 +94,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name="CZN_Zero_Farm",
+    name="CZN_Zero_Farm_v2.0",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

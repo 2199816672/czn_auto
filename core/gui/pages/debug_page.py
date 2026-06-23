@@ -402,15 +402,18 @@ class PixelDebugTab(QWidget):
             logging.warning("输出像素规则: 采样点为空")
             return
 
+        # 从 pixel_checks.json 加载已有规则（避免覆盖），追加新采样后再写回
         path = PIXEL_DEBUGGER_PATH
+        checks_path = path.with_name("pixel_checks.json")
         data: list = []
-        if path.exists():
+        source = checks_path if checks_path.exists() else path
+        if source.exists():
             try:
-                loaded = json.loads(path.read_text(encoding="utf-8"))
+                loaded = json.loads(source.read_text(encoding="utf-8"))
                 if isinstance(loaded, list):
                     data = loaded
             except Exception as e:  # noqa: BLE001 - 调试用，损坏则覆盖
-                logging.warning(f"输出像素规则: 读取已存在文件失败，将重建 {e}")
+                logging.warning(f"读取已有规则失败，将重建: {e}")
 
         entry = {
             "state": state,
@@ -418,16 +421,18 @@ class PixelDebugTab(QWidget):
             "points": [dict(p) for p in self._samples],
         }
         data.append(entry)
-        try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-        except Exception as e:  # noqa: BLE001 - 调试用
-            self.res_label.setText("写入失败")
-            logging.error(f"输出像素规则: 写入失败 {e}")
-            return
-        self.res_label.setText(f"已输出 [{state}] {len(self._samples)} 点")
+        # 同时写入 pixel_checks.json 和 pixel_debugger.json
+        for target in (checks_path, path):
+            try:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            except Exception as e:  # noqa: BLE001 - 调试用
+                self.res_label.setText(f"写入 {target.name} 失败")
+                logging.error(f"输出像素规则: 写入 {target.name} 失败 {e}")
+                return
+        self.res_label.setText(f"已输出 [{state}] {len(self._samples)} 点，总计 {len(data)} 条规则")
         logging.info(
-            f"输出像素规则: 已追加 state=[{state}] {len(self._samples)} 点 -> {path.name}"
+            f"输出像素规则: 已追加 state=[{state}] {len(self._samples)} 点 -> pixel_checks.json"
         )
 
 

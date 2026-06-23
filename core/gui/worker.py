@@ -344,7 +344,7 @@ class AutomationWorker(QThread):
             logging.info("提取奖励")
             click_last()
         elif state == GS.RETREAT:
-            if detector.last_template == "retreat":
+            if detector.last_template in ("retreat", "pixel:retreat", "pixel:retreat_btn"):
                 cx, cy = detector.last_pos
                 if self._retreat_toggle % 2 == 0:
                     logging.info("撤退 点击1(右455)")

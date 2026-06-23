@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""配置读写：封装 config.json 的加载、保存与 profile 目录解析。"""
+"""配置读写：封装 config.json 的加载、保存与 profile 目录解析。
+
+打包(冻结)后首次运行自动从内置资源复制 config.json 到 EXE 同目录。
+"""
 import json
+import sys
 from pathlib import Path
 
 from .constants import BASE_DIR, CONFIG_PATH
@@ -16,6 +20,12 @@ class ConfigManager:
         self.load()
 
     def load(self) -> dict:
+        if not self.path.exists() and getattr(sys, "frozen", False):
+            built_in = Path(sys._MEIPASS) / "config.json"
+            if built_in.exists():
+                self.path.parent.mkdir(parents=True, exist_ok=True)
+                import shutil
+                shutil.copy2(str(built_in), str(self.path))
         with open(self.path, encoding="utf-8") as f:
             self.data = json.load(f)
         return self.data

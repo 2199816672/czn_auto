@@ -57,6 +57,7 @@ class MainWindow(FluentWindow):
         n = self.cfg.template_count()
         logging.info(f"GUI 启动完成 | 配置: [{self.cfg.profile}] ({n} 个模板)")
         logging.info(f"日志文件: {log_path}")
+        logging.info("运行说明：本软件免费，交流群516191448，如您购买了请投诉店家")
 
     def _setup_hotkeys(self):
         self._hk = _HotkeyBridge()
