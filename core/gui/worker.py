@@ -366,8 +366,14 @@ class AutomationWorker(QThread):
         elif state == GS.CHAOS_CENTER:
             logging.info("前往混沌中心")
             _click("chaos_center")
+        elif state == GS.CONFIRM_PURPLE:
+            logging.info("紫色确认")
+            click_last()
         elif state == GS.CONFIRM_ORANGE:
             logging.info("橙色确认")
+            click_last()
+        elif state == GS.CONFIRM_EXTRACT:
+            logging.info("提炼")
             click_last()
         elif state == GS.BOSS_ROOM:
             logging.info("Boss房")
@@ -378,6 +384,11 @@ class AutomationWorker(QThread):
         elif state == GS.EVENT_SKIP:
             logging.info("跳过事件")
             click_last()
+        elif state == GS.COPY_CARD_CHOICE:
+            logging.info("复制卡牌选择")
+            for rx in (0.25, 0.5, 0.75):
+                sim.click_at(int(rx * res[0]), int(0.5 * res[1]), res[0], res[1])
+                time.sleep(0.2)
         elif state == GS.CLOSE_VIEW:
             logging.info("关闭视图")
             _click("close_view")

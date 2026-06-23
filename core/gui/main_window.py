@@ -108,8 +108,6 @@ class MainWindow(FluentWindow):
 
     def _on_settings_saved(self):
         self.home.refresh_quick()
-        InfoBar.success("已保存", "配置已写入 config.json",
-                        duration=2500, position=InfoBarPosition.TOP, parent=self)
 
     def closeEvent(self, event):
         if self.worker and self.worker.isRunning():
