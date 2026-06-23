@@ -113,13 +113,15 @@ class SettingsPage(QScrollArea):
         title.setObjectName("pageTitle")
         self._root.addWidget(title)
 
+        self._building = True
         self._build_general()
         self._build_room_priority()
         self._build_clicks()
         self._build_timing_combat()
         self._build_ocr()
-        self._build_save_bar()
         self._root.addStretch(1)
+        self._building = False
+        self._connect_auto_save()
 
     # ---- 各分组 ----
     def _build_general(self):
@@ -283,17 +285,27 @@ class SettingsPage(QScrollArea):
 
         self._root.addWidget(sec)
 
-    def _build_save_bar(self):
-        bar = QHBoxLayout()
-        bar.addStretch(1)
-        btn = QPushButton("保存配置")
-        btn.setIcon(FluentIcon.SAVE.icon())
-        btn.setProperty("kind", "primary")
-        btn.setMinimumHeight(40)
-        btn.setMinimumWidth(140)
-        btn.clicked.connect(self._save)
-        bar.addWidget(btn)
-        self._root.addLayout(bar)
+    # ---- 自动保存 ----
+    def _connect_auto_save(self):
+        """所有控件变更即保存，去掉显式保存按钮。"""
+        for cb in (self.mode_combo, self.input_combo, self.capture_combo,
+                   self.ocr_backend):
+            cb.currentTextChanged.connect(self._save)
+        for sw in (self.sw_keep_mouse, self.sw_codex, self.sw_retreat,
+                   self.sw_prevent_lock):
+            sw.checkedChanged.connect(self._save)
+        for le in (self.ocr_entry_kw, self.ocr_keyword, self.ocr_exit_kw,
+                   self.ocr_exit_off, self.ocr_buff_keyword):
+            le.editingFinished.connect(self._save)
+        for le in self.ocr_buff_region:
+            le.editingFinished.connect(self._save)
+        for entries in self._click_entries.values():
+            for le in entries:
+                le.editingFinished.connect(self._save)
+        for le in self._timing_entries.values():
+            le.editingFinished.connect(self._save)
+        for le in self._combat_entries.values():
+            le.editingFinished.connect(self._save)
 
     # ---- 行为 ----
     def _move_room(self, delta):
@@ -306,8 +318,11 @@ class SettingsPage(QScrollArea):
         item = self.room_list.takeItem(row)
         self.room_list.insertItem(new, item)
         self.room_list.setCurrentRow(new)
+        self._save()
 
     def _save(self):
+        if self._building:
+            return
         d = self.cfg.data
         g = d.setdefault("game", {})
 
@@ -362,7 +377,7 @@ class SettingsPage(QScrollArea):
         ocr["exit_keyword_offsets"] = off_arr
 
         self.cfg.save()
-        logging.info("配置已保存")
+        logging.debug("配置已自动保存")
         self.saved.emit()
 
     @staticmethod
