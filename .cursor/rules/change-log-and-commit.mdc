@@ -1,0 +1,61 @@
+---
+description: 改动记录与提交规范：同一对话改代码后写 tmp 记录，提交时据此快速生成提交信息
+alwaysApply: true
+---
+
+# 改动记录与提交规范
+
+## 一、改动记录（每次改代码后必做）
+
+在同一对话里**只要修改了代码**（新增/修改/删除任何源码文件），就把本次改动追加记录到 `tmp/changes.md`：
+
+- `tmp/` 不存在则先创建；记录文件固定为 `tmp/changes.md`，多次改动**追加**而非覆盖。
+- 每完成一组相关改动追加一条记录，**不要等到提交时才补写**。
+- 记录只服务于提交，不要写进正式文档；`tmp/` 已（或应）被 `.gitignore` 忽略，不随代码提交。
+
+每条记录格式：
+
+```markdown
+## <时间 YYYY-MM-DD HH:mm> · <一句话主题>
+
+- 类型: feat | fix | refactor | chore | docs
+- 范围(scope): gui / matcher / input / screencap / ocr / combat / config ...
+- 改动文件:
+  - `path/to/file.py` — 改了什么
+- 原因: 为什么改（要解决的问题 / 需求）
+```
+
+## 二、提交规范
+
+提交信息遵循 Conventional Commits（**中文描述**），与现有 git 历史一致：
+
+```
+<type>(<scope>): <简体中文描述>
+```
+
+- **type**：`feat`(新功能) / `fix`(修复) / `refactor`(重构) / `chore`(杂项/构建/依赖) / `docs`(文档)。
+- **scope**：模块名，如 `gui` / `matcher` / `input` / `screencap` / `ocr` / `combat` / `config`，跨多模块可省略。
+- **描述**：祈使句、简洁、不加句号，例如 `fix(input): 修复高分屏点击偏移`。
+- 一次提交聚焦一类改动；改动不相关时拆成多次提交。
+
+## 三、提交流程（用户要求“提交代码”时）
+
+1. **优先读取 `tmp/changes.md`**：以其中的类型/范围/原因为依据生成提交信息，**避免重新逐行分析 diff 揣测改动意图**。
+2. 用 `git status` / `git diff` 仅做核对（确认记录覆盖了实际改动、有无遗漏文件）。
+3. 按上述规范生成 `<type>(<scope>): 描述`；改动跨多类时拆分为多个 commit。
+4. **提交成功后**（`git commit` 确实执行成功），从 `tmp/changes.md` 中删除本次已提交的对应记录，避免下次重复计入；提交失败或被中止则保留记录不动。
+5. 仅在用户明确要求时才提交；不要主动 `git push`。
+
+## 四、终端注意事项（Windows / PowerShell）
+
+本项目终端是 **PowerShell**，提交时极易踩雷，务必遵守：
+
+- **不要用 `&&` 串联命令**：PowerShell（尤其 5.1）不支持。改为分步执行，或用 `;` 分隔。
+- **不要用 heredoc（`<<'EOF'`）写多行提交信息**：PowerShell 不支持。多行提交信息改用多个 `-m`：
+
+```powershell
+git add .
+git commit -m "feat(scope): 标题" -m "正文第一行" -m "正文第二行"
+```
+
+- 单行提交信息直接 `git commit -m "type(scope): 描述"` 即可。
