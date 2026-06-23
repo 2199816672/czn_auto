@@ -57,4 +57,6 @@ class GameState(Enum):
     CODEX_OBTAIN = "codex_obtain"
     CODEX_CONFIRM = "codex_confirm"
     CHAOS_CENTER = "chaos_center"
+    CONFIRM_ORANGE = "confirm_orange"
+    EVENT_SKIP = "event_skip"
     UNKNOWN = "unknown"

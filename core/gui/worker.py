@@ -366,6 +366,12 @@ class AutomationWorker(QThread):
         elif state == GS.CHAOS_CENTER:
             logging.info("前往混沌中心")
             _click("chaos_center")
+        elif state == GS.CONFIRM_ORANGE:
+            logging.info("橙色确认")
+            click_last()
+        elif state == GS.EVENT_SKIP:
+            logging.info("跳过事件")
+            click_last()
         elif state == GS.CLOSE_VIEW:
             logging.info("关闭视图")
             _click("close_view")
