@@ -14,6 +14,7 @@ from PySide6.QtCore import QThread, Signal
 
 from core.combat import CombatModule
 from core.input import InputSimulator
+from core.keepawake import KeepAwake
 from core.screencap import CaptureMethod, ScreenCapturer
 from core.matcher import GameState, StateDetector, TemplateMatcher, load_pixel_checks
 
@@ -121,6 +122,10 @@ class AutomationWorker(QThread):
 
         logging.info(f"=== 开始运行 [配置: {tdir.name}] ===")
 
+        keep_awake = KeepAwake()
+        if g.get("prevent_lock", True):
+            keep_awake.enable()
+
         while not self._stop_evt.is_set():
             if self._pause_evt.is_set():
                 time.sleep(0.3)
@@ -215,6 +220,7 @@ class AutomationWorker(QThread):
                 logging.error(f"运行错误: {e}")
                 time.sleep(2.0)
 
+        keep_awake.disable()
         logging.info("=== 运行结束 ===")
 
     # ---- 状态分发（零式系统）----

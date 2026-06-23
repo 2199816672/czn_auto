@@ -28,6 +28,7 @@ except Exception:
 
 from core.screencap import CaptureMethod, ScreenCapturer
 from core.input import InputSimulator
+from core.keepawake import KeepAwake
 from core.matcher import TemplateMatcher, StateDetector, GameState, load_pixel_checks
 from core.combat import CombatModule
 
@@ -286,6 +287,10 @@ def main_loop(capturer, detector, sim, combat_mod, stats):
     logger.info("=== Zero System Farm started ===")
     logger.info(f"Press [{config.hotkey_stop}] to stop, [{config.hotkey_pause}] to pause")
 
+    keep_awake = KeepAwake()
+    if config.raw.get("game", {}).get("prevent_lock", True):
+        keep_awake.enable()
+
     while running:
         try:
             if paused:
@@ -326,6 +331,7 @@ def main_loop(capturer, detector, sim, combat_mod, stats):
             logger.error(f"Error: {e}", exc_info=True)
             time.sleep(2.0)
 
+    keep_awake.disable()
     stats.print_status()
     logger.info("=== Zero System Farm stopped ===")
 

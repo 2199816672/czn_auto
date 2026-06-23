@@ -16,7 +16,8 @@
     "input_backend": "postmessage",
     "mode": "pc",
     "mission": "zero_system",
-    "retreat_on_first_floor": false
+    "retreat_on_first_floor": false,
+    "prevent_lock": true
   },
   "hotkey": {
     "stop": "f8",
