@@ -49,6 +49,7 @@ class AutomationWorker(QThread):
         self._buff_cooldown = 0.0
         self._retreat_cooldown = 0.0
         self._retreat_toggle = 0
+        self._fallback_retreating = False
 
     # ---- 外部控制 ----
     def request_stop(self):
@@ -125,8 +126,10 @@ class AutomationWorker(QThread):
 
         retreat_on_first = g.get("retreat_on_first_floor", False)
         skip_templates = set()
+        skip_pixel_states = {GameState.TUI1, GameState.TUI2}
         if not retreat_on_first:
             skip_templates.add("retreat")
+            skip_pixel_states.add(GameState.RETREAT_FALLBACK)
 
         logging.info(f"=== 开始运行 [配置: {tdir.name}] ===")
 
@@ -141,7 +144,11 @@ class AutomationWorker(QThread):
             try:
                 frame = capturer.capture_game_area()
                 res = capturer.get_resolution()
-                state = detector.detect(frame, skip_templates)
+                if self._fallback_retreating:
+                    self._handle_fallback_retreat(frame, detector, sim, res)
+                    time.sleep(1.0)
+                    continue
+                state = detector.detect(frame, skip_templates, skip_pixel_states)
                 if state != self._prev_state:
                     prev_name = self._prev_state.value if self._prev_state else "无"
                     logging.info(f"状态 {prev_name} -> {state.value}")
@@ -351,6 +358,11 @@ class AutomationWorker(QThread):
         elif state == GS.EXTRACTION:
             logging.info("提取奖励")
             click_last()
+        elif state == GS.RETREAT_FALLBACK:
+            if cfg.get("retreat_on_first_floor", False) and not self._fallback_retreating:
+                self._fallback_retreating = True
+                logging.info("撤退保底像素匹配，进入撤退模式")
+            time.sleep(sr_delay)
         elif state == GS.RETREAT:
             if time.time() < self._retreat_cooldown:
                 time.sleep(0.5)
@@ -528,6 +540,26 @@ class AutomationWorker(QThread):
                 clicked = True
         if not clicked:
             time.sleep(0.5)
+
+    # ---- 撤退模式（保底像素驱动） ----
+    def _handle_fallback_retreat(self, frame, detector, sim, res):
+        targets = {"tui1": GameState.TUI1, "tui2": GameState.TUI2, "retreat_btn": GameState.RETREAT}
+        for name, gs in targets.items():
+            rule = next((r for r in detector.pixel_checker.rules if r.state == gs), None)
+            if rule is None:
+                continue
+            hit, pos = detector.pixel_checker.match(frame, rule)
+            if hit:
+                detector._record(gs, pos, 1.0, f"pixel:{name}")
+                if name == "retreat_btn":
+                    logging.info("撤退模式 点击retreat_btn 退出")
+                    sim.click_at(pos[0], pos[1], res[0], res[1])
+                    self._fallback_retreating = False
+                    self._retreat_cooldown = time.time() + 3.0
+                else:
+                    logging.info(f"撤退模式 点击{name}")
+                    sim.click_at(pos[0], pos[1], res[0], res[1])
+                return
 
     # ---- 赛季图初始刷取 ----
     def _handle_season_reroll(self, cfg, frame, state, detector, sim, res, sr_delay, ocr_state):

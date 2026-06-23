@@ -71,9 +71,12 @@ class StateDetector:
             self.history.pop(0)
 
     def detect(self, frame: np.ndarray,
-               skip_templates: Optional[set] = None) -> GameState:
+               skip_templates: Optional[set] = None,
+               skip_pixel_states: Optional[set] = None) -> GameState:
         for kind, key, state in self._build_ordered():
             if kind == "pixel":
+                if skip_pixel_states and state in skip_pixel_states:
+                    continue
                 rule: PixelRule = key
                 hit, pos = self.pixel_checker.match(frame, rule)
                 if hit:
