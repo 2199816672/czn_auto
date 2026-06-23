@@ -188,7 +188,7 @@
     "room_elite"
   ],
   "timing": {
-    "screenshot_interval": 0.2,
+    "screenshot_interval": 0.8,
     "click_delay": 0.1,
     "post_click_wait": 0.5,
     "state_check_retries": 1.0,

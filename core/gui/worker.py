@@ -48,7 +48,6 @@ class AutomationWorker(QThread):
         self._buff_done = False
         self._buff_cooldown = 0.0
         self._retreat_cooldown = 0.0
-        self._pixel_skip_until = 0.0
         self._retreat_toggle = 0
 
     # ---- 外部控制 ----
@@ -134,9 +133,6 @@ class AutomationWorker(QThread):
                 time.sleep(0.3)
                 continue
             try:
-                if time.time() < self._pixel_skip_until:
-                    time.sleep(0.5)
-                    continue
                 frame = capturer.capture_game_area()
                 res = capturer.get_resolution()
                 state = detector.detect(frame, skip_templates)
@@ -363,8 +359,7 @@ class AutomationWorker(QThread):
                     logging.info("撤退 右上角 右596上915")
                     sim.click_at(cx + 596, cy - 915, res[0], res[1])
                 self._retreat_toggle += 1
-                self._retreat_cooldown = time.time() + 3.0
-                self._pixel_skip_until = time.time() + 3.0
+                self._retreat_cooldown = time.time() + 5.0
                 time.sleep(sr_delay)
             else:
                 logging.info("设置→脱离")
