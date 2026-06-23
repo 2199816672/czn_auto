@@ -47,6 +47,8 @@ class AutomationWorker(QThread):
         self._buff_active = False
         self._buff_done = False
         self._buff_cooldown = 0.0
+        self._retreat_cooldown = 0.0
+        self._pixel_skip_until = 0.0
         self._retreat_toggle = 0
 
     # ---- 外部控制 ----
@@ -132,6 +134,9 @@ class AutomationWorker(QThread):
                 time.sleep(0.3)
                 continue
             try:
+                if time.time() < self._pixel_skip_until:
+                    time.sleep(0.5)
+                    continue
                 frame = capturer.capture_game_area()
                 res = capturer.get_resolution()
                 state = detector.detect(frame, skip_templates)
@@ -235,6 +240,7 @@ class AutomationWorker(QThread):
         if state == GS.MAIN_MENU:
             self._buff_done = False
             self._buff_cooldown = 0.0
+            self._retreat_cooldown = 0.0
             logging.info("主界面→零式系统")
             click_last()
         elif state == GS.ZERO_SYSTEM_ENTRY:
@@ -344,15 +350,21 @@ class AutomationWorker(QThread):
             logging.info("提取奖励")
             click_last()
         elif state == GS.RETREAT:
+            if time.time() < self._retreat_cooldown:
+                time.sleep(0.5)
+                return
+            time.sleep(1.0)
             if detector.last_template in ("retreat", "pixel:retreat", "pixel:retreat_btn"):
                 cx, cy = detector.last_pos
                 if self._retreat_toggle % 2 == 0:
-                    logging.info("撤退 点击1(右455)")
+                    logging.info("撤退 右边 右455")
                     sim.click_at(cx + 455, cy, res[0], res[1])
                 else:
-                    logging.info("撤退 点击2(右596上890)")
-                    sim.click_at(cx + 596, cy - 890, res[0], res[1])
+                    logging.info("撤退 右上角 右596上915")
+                    sim.click_at(cx + 596, cy - 915, res[0], res[1])
                 self._retreat_toggle += 1
+                self._retreat_cooldown = time.time() + 3.0
+                self._pixel_skip_until = time.time() + 3.0
                 time.sleep(sr_delay)
             else:
                 logging.info("设置→脱离")
@@ -404,6 +416,7 @@ class AutomationWorker(QThread):
                     time.sleep(0.2)
             else:
                 _click("confirm_acquire")
+                time.sleep(0.5)
                 tpl = detector.last_template
                 if tpl and tpl in detector.matcher.templates:
                     h, w = detector.matcher.templates[tpl].shape[:2]
