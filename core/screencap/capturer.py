@@ -89,7 +89,6 @@ class ScreenCapturer:
         if frame is None:
             logging.debug(f"[{self.backend.name}] 截图失败，返回空白帧")
             return np.zeros((self.BASE_H, self.BASE_W, 3), dtype=np.uint8)
-        logging.debug(f"[{self.backend.name}] 截图成功 原始帧 {frame.shape[1]}x{frame.shape[0]}")
         return frame
 
     def capture_game_area(self) -> np.ndarray:
