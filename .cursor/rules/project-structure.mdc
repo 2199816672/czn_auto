@@ -24,7 +24,7 @@ alwaysApply: true
 | `config.json` | 全部运行配置：坐标点、点击偏移、时序、OCR 关键词、模板 profile 等 |
 | `templates/` | 模板与像素规则统一根目录：`templates/templates_cn/`、`templates/templates_global/` 为国服 / 国际服模板图片（PNG），由 `config.json` 的 `template_profile` 切换；`templates/templates_colors/` 为像素点判断规则（JSON），`core/matcher/pixel.py` 的 `load_pixel_checks()` 优先读 `<profile>.json`，回退 `pixel_checks.json` |
 | `packaging/` | 打包相关文件：`czn_auto.spec`（PyInstaller 配置，用 `SPECPATH` 解析项目根，路径与运行目录无关）、`build.bat`（一键打包，自动 `cd` 到项目根、产物输出根目录 `dist/`、复制 `config.json`、整个 `templates/` 与 `bin/`）、`app_icon.ico`（exe 本体图标 + 运行时窗口/任务栏图标，经 spec 的 `datas`/`icon` 打入） |
-| `bin/adb/` | 内置 ADB 二进制目录：放 `adb.exe` + `AdbWinApi.dll` + `AdbWinUsbApi.dll`（不入 git，需自行下载）。`core/adb/adb_path()` 优先调此处，缺失兜底 PATH；`build.bat` 将整个 `bin/` 复制到 exe 同目录 |
+| `bin/adb/` | 内置 ADB 二进制目录：随仓库提供 `adb.exe` + `AdbWinApi.dll` + `AdbWinUsbApi.dll`。`core/adb/adb_path()` 优先调此处，缺失兜底 PATH；`build.bat` 将整个 `bin/` 复制到 exe 同目录 |
 
 # 核心架构
 
