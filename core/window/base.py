@@ -17,17 +17,20 @@ user32 = ctypes.windll.user32
 
 @dataclass(frozen=True)
 class WindowTarget:
-    """一个可被绑定的目标窗口。
+    """一个可被绑定的目标窗口 / 设备。
 
     - ``hwnd``: Win32 窗口句柄（运行期有效，重启后会变，不应持久化）。
-    - ``title``: 窗口标题文本（用于持久化与重新定位）。
+      ADB 设备没有窗口句柄，此处为 0。
+    - ``title``: 窗口标题文本（用于持久化与重新定位）。ADB 设备存 serial。
     - ``provider_key`` / ``provider_label``: 来源提供者的标识与中文显示名。
+    - ``device_id``: ADB 设备 serial（仅 adb 来源非空，用于截屏/点击绑定）。
     """
 
     hwnd: int
     title: str
     provider_key: str
     provider_label: str
+    device_id: str = ""
 
     @property
     def display(self) -> str:

@@ -36,6 +36,7 @@ INPUT_BACKEND_DISPLAY = {
     "sendinput": "SendInput (前台)",
     "sendmessage": "SendMessage (后台)",
     "postmessage": "PostMessage (后台推荐)",
+    "adb": "ADB (安卓设备)",
 }
 
 # 房间路线优先级显示名

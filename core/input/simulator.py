@@ -25,6 +25,16 @@ class InputSimulator:
         if hwnd:
             self.backend.set_window(hwnd)
 
+        # 设备型后端（ADB）：从全局选中设备解析 serial 并绑定
+        if hasattr(self.backend, "set_device"):
+            from core.window import get_selected_device
+
+            serial = get_selected_device()
+            if serial:
+                self.set_device(serial)
+            else:
+                logging.warning(f"未选择 ADB 设备，{self.method} 后端将无法点击")
+
         logging.info(f"输入模拟方式: {self.method} (后端: {self.backend.name})")
 
     @property
@@ -38,6 +48,12 @@ class InputSimulator:
 
     def set_window(self, hwnd: int):
         self.backend.set_window(hwnd)
+
+    def set_device(self, serial: str):
+        """绑定 ADB 设备 serial（仅设备型后端支持，其它后端忽略）。"""
+        setter = getattr(self.backend, "set_device", None)
+        if callable(setter):
+            setter(serial)
 
     def _find_window(self) -> int:
         from core.window import resolve_hwnd

@@ -16,7 +16,7 @@ from core.input import InputSimulator
 from core.keepawake import KeepAwake
 from core.screencap import CaptureMethod, ScreenCapturer
 from core.matcher import GameState, StateDetector, TemplateMatcher, load_pixel_checks
-from core.window import resolve_hwnd
+from core.window import get_selected_device, resolve_hwnd
 
 from .config_manager import ConfigManager
 from .constants import BASE_DIR, DEBUG_DIR
@@ -76,12 +76,18 @@ class AutomationWorker(QThread):
 
         tdir = BASE_DIR / "templates" / cfg.get("template_profile", "templates_cn")
         capturer = ScreenCapturer(method=g.get("capture_method", CaptureMethod.DEFAULT.value))
-        hwnd = resolve_hwnd()
-        if hwnd:
-            capturer.set_window(hwnd)
-            logging.info(f"锁定游戏窗口: 句柄={hwnd} 捕获方式={capturer.method}")
+        serial = get_selected_device()
+        if serial:
+            # ADB 设备：用 serial 绑定截屏/点击，无 Win32 句柄
+            capturer.set_device(serial)
+            logging.info(f"锁定 ADB 设备: {serial} 捕获方式={capturer.method}")
         else:
-            logging.warning("未选择目标窗口，请在首页选择窗口后再运行")
+            hwnd = resolve_hwnd()
+            if hwnd:
+                capturer.set_window(hwnd)
+                logging.info(f"锁定游戏窗口: 句柄={hwnd} 捕获方式={capturer.method}")
+            else:
+                logging.warning("未选择目标窗口，请在首页选择窗口后再运行")
         matcher = TemplateMatcher(tdir)
         detector = StateDetector(matcher, load_pixel_checks(cfg.get("template_profile")))
         sim = InputSimulator(backend=g.get("input_backend", "postmessage"))

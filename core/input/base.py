@@ -55,6 +55,7 @@ class InputMethod(str, Enum):
     SENDINPUT = "sendinput"        # 前台：真实系统鼠标输入，发往前台窗口
     SENDMESSAGE = "sendmessage"    # 后台：窗口消息，仍移动真实光标（同步阻塞）
     POSTMESSAGE = "postmessage"    # 后台：窗口消息，完全不碰真实鼠标（异步投递）
+    ADB = "adb"                    # 安卓设备：经 adb shell input tap 点击
 
     DEFAULT = "postmessage"        # 别名：默认方式（值与 POSTMESSAGE 相同）
 

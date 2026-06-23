@@ -48,6 +48,7 @@ class MainWindow(FluentWindow):
         self.home.startRequested.connect(self.start_run)
         self.home.pauseRequested.connect(self.toggle_pause)
         self.home.stopRequested.connect(self.stop_run)
+        self.home.methodsChanged.connect(self.settings.sync_methods)
         self.settings.saved.connect(self._on_settings_saved)
 
     def _setup_logging(self):
