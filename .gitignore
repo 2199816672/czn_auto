@@ -10,7 +10,7 @@ build/
 logs/
 debug/
 AGENTS.md
-templates_colors/pixel_debugger.json
+templates/templates_colors/pixel_debugger.json
 
 # 构建产物
 dist/

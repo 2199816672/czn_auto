@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 """像素点判断。
 
-负责单一职责：加载 ``templates_colors/`` 里的像素规则，并对帧做相对坐标多点
+负责单一职责：加载 ``templates/templates_colors/`` 里的像素规则，并对帧做相对坐标多点
 RGB 校验。规则不写进 ``config.json``，坐标用相对值天然适配各分辨率。
 """
 import json
 import logging
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -20,20 +21,23 @@ logger = logging.getLogger(__name__)
 # 每个通道允许上下浮动的固定容差（RGB 各 ±DEFAULT_PIXEL_TOL）
 DEFAULT_PIXEL_TOL = 10
 
-# 项目根目录：core/matcher/pixel.py -> parents[2]
-_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# 资源根目录：打包(冻结)后取 exe 同目录；开发态为项目根 core/matcher/pixel.py -> parents[2]
+if getattr(sys, "frozen", False):
+    _PROJECT_ROOT = Path(sys.executable).parent
+else:
+    _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def load_pixel_checks(profile: Optional[str] = None,
                       base_dir: Optional[Path] = None) -> List[dict]:
-    """从 templates_colors/ 加载像素点判断规则（原始 dict 列表）。
+    """从 templates/templates_colors/ 加载像素点判断规则（原始 dict 列表）。
 
-    优先读取 templates_colors/<profile>.json（按 template_profile 区分国服/国际服），
-    缺失时回退 templates_colors/pixel_checks.json。文件内容可为规则数组，
+    优先读取 templates/templates_colors/<profile>.json（按 template_profile 区分国服/国际服），
+    缺失时回退 templates/templates_colors/pixel_checks.json。文件内容可为规则数组，
     或含 "pixel_checks" 键的对象。读取失败/不存在均返回空列表。
     """
     base = Path(base_dir) if base_dir else _PROJECT_ROOT
-    color_dir = base / "templates_colors"
+    color_dir = base / "templates" / "templates_colors"
     candidates: List[Path] = []
     if profile:
         candidates.append(color_dir / f"{profile}.json")
@@ -45,7 +49,7 @@ def load_pixel_checks(profile: Optional[str] = None,
                     data = json.load(fh)
                 if isinstance(data, dict):
                     data = data.get("pixel_checks", [])
-                logger.info(f"Loaded pixel checks from templates_colors/{f.name}")
+                logger.info(f"Loaded pixel checks from templates/templates_colors/{f.name}")
                 return data or []
         except (OSError, ValueError) as e:
             logger.warning(f"读取像素规则 {f} 失败: {e}")

@@ -15,6 +15,14 @@ def run():
 
     from .theme import apply_theme
 
+    # 设置 AppUserModelID，使 Windows 任务栏使用窗口图标而非默认 Python 图标
+    try:
+        import ctypes
+
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("czn.zero.farm")
+    except Exception:
+        pass
+
     app = QApplication.instance() or QApplication(sys.argv)
 
     from .main_window import MainWindow

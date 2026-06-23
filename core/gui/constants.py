@@ -13,7 +13,13 @@ else:
 CONFIG_PATH = BASE_DIR / "config.json"
 LOGS_DIR = BASE_DIR / "logs"
 DEBUG_DIR = BASE_DIR / "debug"
-PIXEL_DEBUGGER_PATH = BASE_DIR / "templates_colors" / "pixel_debugger.json"
+PIXEL_DEBUGGER_PATH = BASE_DIR / "templates" / "templates_colors" / "pixel_debugger.json"
+
+# 应用图标：打包(冻结)后随 datas 解压到 _MEIPASS 根；开发态在 packaging/ 下
+if getattr(sys, "frozen", False):
+    ICON_PATH = Path(getattr(sys, "_MEIPASS", BASE_DIR)) / "app_icon.ico"
+else:
+    ICON_PATH = BASE_DIR / "packaging" / "app_icon.ico"
 
 WINDOW_TITLE = "CZN Zero Farm - 零式系统自动刷取"
 

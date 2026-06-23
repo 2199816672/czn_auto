@@ -40,7 +40,7 @@ class ConfigManager:
         self.data["template_profile"] = value
 
     def profile_dir(self, name: str | None = None) -> Path:
-        return BASE_DIR / (name or self.profile)
+        return BASE_DIR / "templates" / (name or self.profile)
 
     def template_count(self, name: str | None = None) -> int:
         d = self.profile_dir(name)

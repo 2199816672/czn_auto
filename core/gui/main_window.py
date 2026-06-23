@@ -4,10 +4,11 @@
 import logging
 
 from PySide6.QtCore import QObject, Signal
+from PySide6.QtGui import QIcon
 from qfluentwidgets import FluentIcon, FluentWindow, InfoBar, InfoBarPosition
 
 from .config_manager import ConfigManager
-from .constants import WINDOW_TITLE
+from .constants import ICON_PATH, WINDOW_TITLE
 from .logging_bridge import QtLogHandler, install_logging
 from .pages import DebugPage, HomePage, SettingsPage
 from .worker import AutomationWorker
@@ -35,6 +36,8 @@ class MainWindow(FluentWindow):
         self.addSubInterface(self.settings, FluentIcon.SETTING, "设置")
 
         self.setWindowTitle(WINDOW_TITLE)
+        if ICON_PATH.exists():
+            self.setWindowIcon(QIcon(str(ICON_PATH)))
         self.resize(1180, 820)
 
         self._wire()

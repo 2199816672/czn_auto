@@ -74,7 +74,7 @@ class AutomationWorker(QThread):
         sc.combat = cfg["combat"]
         sc.timing = cfg["timing"]
 
-        tdir = BASE_DIR / cfg.get("template_profile", "templates_cn")
+        tdir = BASE_DIR / "templates" / cfg.get("template_profile", "templates_cn")
         capturer = ScreenCapturer(method=g.get("capture_method", CaptureMethod.DEFAULT.value))
         title = g.get("window_title", "卡厄思梦境")
         hwnd = ctypes.windll.user32.FindWindowW(None, title)
@@ -297,8 +297,7 @@ class AutomationWorker(QThread):
             logging.info("地图点击默认节点")
             click_last()
         elif state == GS.COMBAT:
-            # 战斗交由游戏自身处理，状态机仅等待，不做任何操作
-            time.sleep(t["screenshot_interval"])
+            time.sleep(2)
         elif state == GS.COMBAT_VICTORY:
             logging.info("战斗胜利")
             stats["battles"] += 1
