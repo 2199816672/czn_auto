@@ -13,7 +13,7 @@ import cv2
 
 from core.screencap import CaptureMethod, ScreenCapturer
 from core.matcher import StateDetector, TemplateMatcher, load_pixel_checks
-from core.window import resolve_hwnd
+from core.window import get_selected_device, resolve_hwnd
 
 from .config_manager import ConfigManager
 from .constants import DEBUG_DIR
@@ -34,11 +34,17 @@ def grab_game_frame(cfg_mgr: ConfigManager):
     method = g.get("capture_method", CaptureMethod.DEFAULT.value)
 
     cap = ScreenCapturer(method=method)
-    hwnd = resolve_hwnd()
-    if hwnd:
-        cap.set_window(hwnd)
+    serial = get_selected_device()
+    if serial:
+        cap.set_device(serial)
+        bound = True
+    else:
+        hwnd = resolve_hwnd()
+        if hwnd:
+            cap.set_window(hwnd)
+        bound = bool(hwnd)
     try:
-        return cap.capture_game_area(), bool(hwnd)
+        return cap.capture_game_area(), bound
     finally:
         cap.close()
 
@@ -68,9 +74,13 @@ class CaptureService:
         tdir.mkdir(parents=True, exist_ok=True)
 
         cap = ScreenCapturer(method=method)
-        hwnd = resolve_hwnd()
-        if hwnd:
-            cap.set_window(hwnd)
+        serial = get_selected_device()
+        if serial:
+            cap.set_device(serial)
+        else:
+            hwnd = resolve_hwnd()
+            if hwnd:
+                cap.set_window(hwnd)
 
         logging.info(f"=== 模板采集模式 [{self.cfg.profile}] 捕获方式={method} ===")
         logging.info(f"目录: {tdir.resolve()}")
@@ -115,13 +125,21 @@ class DiagnoseService:
         matcher = TemplateMatcher(tdir)
         detector = StateDetector(matcher, load_pixel_checks(cfg.get("template_profile")))
 
-        hwnd = resolve_hwnd()
-        if hwnd:
-            cap.set_window(hwnd)
+        serial = get_selected_device()
+        hwnd = 0
+        if serial:
+            cap.set_device(serial)
+        else:
+            hwnd = resolve_hwnd()
+            if hwnd:
+                cap.set_window(hwnd)
 
         logging.info("=" * 40)
         logging.info(f"诊断模式 [{self.cfg.profile}] 捕获方式={method}")
-        if hwnd:
+        if serial:
+            logging.info("   使用 ADB 设备")
+            logging.info(f"      设备: {serial}")
+        elif hwnd:
             from core.window import get_selected, get_window_title
             sel = get_selected()
             title = sel.title if sel else get_window_title(hwnd)
@@ -132,7 +150,7 @@ class DiagnoseService:
             logging.info(f"      标题: {title}  句柄: {hwnd}")
             logging.info(f"      位置: ({rect.left},{rect.top})  {w}x{h}")
         else:
-            logging.info("   未选择目标窗口，请在首页选择窗口")
+            logging.info("   未选择目标窗口/设备，请在首页选择")
 
         frame = cap.capture_game_area()
         res = cap.get_resolution()

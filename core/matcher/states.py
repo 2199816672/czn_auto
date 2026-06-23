@@ -58,6 +58,7 @@ class GameState(Enum):
     CODEX_CONFIRM = "codex_confirm"
     CHAOS_CENTER = "chaos_center"
     CONFIRM_ORANGE = "confirm_orange"
+    GAME_SETTLED = "game_settled"
     CONFIRM_EXTRACT = "button_extract"
     CONFIRM_PURPLE = "button_confirm_purple"
     BOSS_ROOM = "boss_room"

@@ -13,6 +13,7 @@ class CaptureMethod(str, Enum):
     DXGI = "dxgi"            # DXGI 桌面复制（dxcam），前台
     FRAMEPOOL = "framepool"  # WinRT FramePool，支持后台/遮挡
     PRINTWINDOW = "printwindow"  # GDI PrintWindow，支持后台/遮挡
+    ADB = "adb"              # 安卓设备：经 adb exec-out screencap 截屏
 
     DEFAULT = "framepool"    # 别名：默认方式（值与 FRAMEPOOL 相同）
 
@@ -53,6 +54,10 @@ class ScreencapBackend(ABC):
     # True 表示 grab() 直接返回目标窗口画面（无需再按桌面坐标裁剪）；
     # False 表示返回整块桌面，需要 ScreenCapturer 按窗口矩形裁剪。
     returns_window_only: bool = False
+
+    # True 表示该后端是「设备型」（如 ADB）：grab() 返回设备整屏，
+    # 无 Win32 几何，ScreenCapturer 跳过窗口裁剪、直接缩放到基准分辨率。
+    is_device: bool = False
 
     def __init__(self):
         self._hwnd: Optional[int] = None

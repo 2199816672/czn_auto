@@ -20,6 +20,22 @@ DEFAULT_THRESHOLD = 0.8
 _IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".bmp")
 
 
+def _imread_unicode(path: Path) -> Optional[np.ndarray]:
+    """读图（兼容中文路径）。
+
+    OpenCV 在 Windows 上的 ``cv2.imread`` 不支持非 ASCII 路径，会静默返回
+    ``None``；改用 ``np.fromfile`` + ``cv2.imdecode`` 从字节解码，避免项目放在
+    带中文的目录下时模板全部加载失败。
+    """
+    try:
+        buf = np.fromfile(str(path), dtype=np.uint8)
+    except OSError:
+        return None
+    if buf.size == 0:
+        return None
+    return cv2.imdecode(buf, cv2.IMREAD_COLOR)
+
+
 class TemplateMatcher:
     """加载模板图并对帧做模板匹配。"""
 
@@ -34,7 +50,7 @@ class TemplateMatcher:
         for f in sorted(templates_dir.rglob("*")):
             if not (f.is_file() and f.suffix.lower() in _IMAGE_SUFFIXES):
                 continue
-            img = cv2.imread(str(f))
+            img = _imread_unicode(f)
             if img is None:
                 continue
             if len(img.shape) == 3:

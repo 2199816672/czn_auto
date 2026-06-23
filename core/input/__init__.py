@@ -25,6 +25,7 @@ AVAILABLE_METHODS = {
     InputMethod.SENDINPUT.value: "SendInput (前台)",
     InputMethod.SENDMESSAGE.value: "SendMessage (后台)",
     InputMethod.POSTMESSAGE.value: "PostMessage (后台/不碰鼠标，推荐)",
+    InputMethod.ADB.value: "ADB (安卓设备)",
 }
 
 
@@ -39,6 +40,10 @@ def create_backend(method: "Union[str, InputMethod, None]") -> InputBackend:
     if method == InputMethod.SENDMESSAGE.value:
         from .sendmessage import SendMessageBackend
         return SendMessageBackend()
+
+    if method == InputMethod.ADB.value:
+        from .adb import AdbInputBackend
+        return AdbInputBackend()
 
     if method != InputMethod.POSTMESSAGE.value:
         logging.warning(f"未知输入方式 '{method}'，回退到 postmessage")

@@ -68,6 +68,7 @@ class HomePage(QWidget):
     pauseRequested = Signal()
     stopRequested = Signal()
     quickChanged = Signal()  # 服务器/模式 在首页被切换
+    methodsChanged = Signal()  # 选 ADB/PC 设备后自动改了输入/捕获方式
 
     def __init__(self, cfg_mgr: ConfigManager, parent=None):
         super().__init__(parent)
@@ -240,14 +241,55 @@ class HomePage(QWidget):
         self.cb_window.setCurrentIndex(sel_index)
         self.cb_window.blockSignals(False)
         # 同步全局选择到下拉当前项（即使没有用户交互）
-        select_window(self.cb_window.itemData(sel_index))
-        logging.info(f"发现 {len(targets)} 个候选窗口")
+        chosen = self.cb_window.itemData(sel_index)
+        select_window(chosen)
+        self._apply_methods_for_target(chosen)
+        logging.info(f"发现 {len(targets)} 个候选窗口/设备")
 
     def _on_window_changed(self, index: int):
         target = self.cb_window.itemData(index)
         select_window(target)
         if target is not None:
             logging.info(f"选择目标窗口: {target.title} (句柄={target.hwnd})")
+        self._apply_methods_for_target(target)
+
+    def _apply_methods_for_target(self, target):
+        """根据所选目标来源自动切换输入/捕获方式。
+
+        - 选 ADB 设备：记忆当前 PC 方式后切到 adb；
+        - 选回 PC 窗口：从记忆值恢复（缺省回退 postmessage/framepool）。
+        变更写入 config 并保存，发 ``methodsChanged`` 让设置页刷新下拉。
+        """
+        g = self.cfg.data.setdefault("game", {})
+        is_adb = target is not None and getattr(target, "provider_key", "") == "adb"
+        changed = False
+
+        if is_adb:
+            if g.get("input_backend") != "adb":
+                g["prev_input_backend"] = g.get("input_backend", "postmessage")
+                g["input_backend"] = "adb"
+                changed = True
+            if g.get("capture_method") != "adb":
+                g["prev_capture_method"] = g.get("capture_method", "framepool")
+                g["capture_method"] = "adb"
+                changed = True
+            if changed:
+                logging.info("已切换输入/捕获方式为 ADB")
+        else:
+            if g.get("input_backend") == "adb":
+                g["input_backend"] = g.get("prev_input_backend", "postmessage")
+                changed = True
+            if g.get("capture_method") == "adb":
+                g["capture_method"] = g.get("prev_capture_method", "framepool")
+                changed = True
+            if changed:
+                logging.info(
+                    f"已恢复输入/捕获方式为 {g.get('input_backend')}/{g.get('capture_method')}"
+                )
+
+        if changed:
+            self.cfg.save()
+            self.methodsChanged.emit()
 
     # ---- 对外接口 ----
     def append_log(self, msg: str, levelno: int, is_state: bool):

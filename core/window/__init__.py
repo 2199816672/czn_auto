@@ -27,17 +27,20 @@ from .base import (
     get_window_title,
     user32,
 )
+from .adb import AdbDeviceProvider
 from .game import GameWindowProvider
 
 __all__ = [
     "WindowProvider",
     "WindowTarget",
     "GameWindowProvider",
+    "AdbDeviceProvider",
     "register_provider",
     "available_providers",
     "discover_windows",
     "select_window",
     "get_selected",
+    "get_selected_device",
     "resolve_hwnd",
     "enum_top_windows",
     "get_window_title",
@@ -47,6 +50,7 @@ __all__ = [
 # 注册表：顺序即优先级（首页下拉展示顺序、兜底优先级）
 _PROVIDERS: List[WindowProvider] = [
     GameWindowProvider(),
+    AdbDeviceProvider(),
 ]
 
 # 进程全局选中窗口（不持久化，退出即失效）
@@ -66,15 +70,19 @@ def available_providers() -> List[WindowProvider]:
 
 
 def discover_windows() -> List[WindowTarget]:
-    """跨所有提供者发现候选窗口，按 hwnd 去重。"""
+    """跨所有提供者发现候选窗口/设备，去重。
+
+    去重键含来源与设备 id：窗口型靠 hwnd 唯一，ADB 设备 hwnd 恒为 0、靠 device_id 区分。
+    """
     out: List[WindowTarget] = []
     seen = set()
     for provider in _PROVIDERS:
         try:
             for target in provider.discover():
-                if target.hwnd in seen:
+                key = (target.provider_key, target.hwnd, target.device_id)
+                if key in seen:
                     continue
-                seen.add(target.hwnd)
+                seen.add(key)
                 out.append(target)
         except Exception:
             continue
@@ -90,6 +98,13 @@ def select_window(target: Optional[WindowTarget]) -> None:
 def get_selected() -> Optional[WindowTarget]:
     """返回当前进程全局选中窗口（未选择返回 None）。"""
     return _selected
+
+
+def get_selected_device() -> Optional[str]:
+    """返回当前选中的 ADB 设备 serial；非 adb 来源或未选择返回 None。"""
+    if _selected is not None and _selected.provider_key == "adb":
+        return _selected.device_id or None
+    return None
 
 
 def _is_window(hwnd: int) -> bool:

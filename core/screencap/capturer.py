@@ -40,6 +40,12 @@ class ScreenCapturer:
         self._hwnd = hwnd
         self.backend.set_window(hwnd)
 
+    def set_device(self, serial: str):
+        """绑定 ADB 设备 serial（仅设备型后端支持）。"""
+        setter = getattr(self.backend, "set_device", None)
+        if callable(setter):
+            setter(serial)
+
     def _query_geometry(self):
         """实时查询窗口几何，不缓存（拖动/缩放后立即生效）。
 
@@ -94,6 +100,14 @@ class ScreenCapturer:
     def capture_game_area(self) -> np.ndarray:
         """返回归一化到 1920x1080 的游戏画面。"""
         frame = self.capture()
+
+        # 设备型后端（ADB）：grab() 是设备整屏，无 Win32 几何，直接缩放到基准分辨率
+        if getattr(self.backend, "is_device", False):
+            if frame.shape[1] != self.BASE_W or frame.shape[0] != self.BASE_H:
+                frame = cv2.resize(frame, (self.BASE_W, self.BASE_H))
+            self.last_resolution = (self.BASE_W, self.BASE_H)
+            return frame
+
         win_rect, _, client_size = self._query_geometry()
 
         # 窗口型后端：grab() 已是整窗口画面，裁剪出客户区（不缩放）
@@ -130,6 +144,14 @@ class ScreenCapturer:
         return crop
 
     def game_to_screen(self, gx: int, gy: int) -> Tuple[int, int]:
+        # 设备型后端（ADB）：基准坐标按设备实际分辨率线性映射回设备像素
+        if getattr(self.backend, "is_device", False):
+            dev = getattr(self.backend, "device_size", None)
+            if not dev:
+                return gx, gy
+            dw, dh = dev
+            return gx * dw // self.BASE_W, gy * dh // self.BASE_H
+
         win_rect, client_rect, _ = self._query_geometry()
         # 窗口型后端：游戏坐标基于客户区，直接映射到客户区在屏幕上的位置
         if getattr(self.backend, "returns_window_only", False) and client_rect is not None:

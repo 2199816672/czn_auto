@@ -380,6 +380,18 @@ class SettingsPage(QScrollArea):
         logging.debug("配置已自动保存")
         self.saved.emit()
 
+    def sync_methods(self):
+        """从 config 重新同步输入/捕获下拉（首页选 ADB/PC 自动切换后调用）。"""
+        g = self.cfg.data.get("game", {})
+        in_text = INPUT_BACKEND_DISPLAY.get(g.get("input_backend", "postmessage"))
+        cap_text = AVAILABLE_METHODS.get(g.get("capture_method", CaptureMethod.DEFAULT.value))
+        for combo, text in ((self.input_combo, in_text), (self.capture_combo, cap_text)):
+            if not text:
+                continue
+            combo.blockSignals(True)
+            combo.setCurrentText(text)
+            combo.blockSignals(False)
+
     @staticmethod
     def _reverse(mapping: dict, display: str, default: str) -> str:
         for k, v in mapping.items():

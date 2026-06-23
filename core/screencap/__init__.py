@@ -26,12 +26,17 @@ AVAILABLE_METHODS = {
     CaptureMethod.FRAMEPOOL.value: "FramePool (后台/遮挡可截, 默认)",
     CaptureMethod.PRINTWINDOW.value: "PrintWindow (后台/遮挡可截)",
     CaptureMethod.AUTO.value: "自动 (DXGI 前台)",
+    CaptureMethod.ADB.value: "ADB (安卓设备截屏)",
 }
 
 
 def create_backend(method: "Union[str, CaptureMethod, None]") -> ScreencapBackend:
     """根据方式名创建捕获后端，失败时回退到 DXGI。"""
     method = CaptureMethod.normalize(method)
+
+    if method == CaptureMethod.ADB.value:
+        from .adb import AdbScreencapBackend
+        return AdbScreencapBackend()
 
     if method == CaptureMethod.FRAMEPOOL.value:
         try:

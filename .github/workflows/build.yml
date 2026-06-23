@@ -40,6 +40,7 @@ jobs:
         run: |
           Copy-Item config.json dist/config.json -Force
           Copy-Item templates dist/templates -Recurse -Force
+          Copy-Item bin dist/bin -Recurse -Force
           New-Item -ItemType Directory -Force -Path dist/logs | Out-Null
 
       - name: 打包为 zip

@@ -20,9 +20,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [4/4] 复制配置与模板到 exe 同目录...
+echo [4/4] 复制配置、模板与内置 adb 到 exe 同目录...
 copy /y config.json dist\config.json >nul
 xcopy /e /i /y templates dist\templates >nul
+if exist bin xcopy /e /i /y bin dist\bin >nul
 if not exist dist\logs mkdir dist\logs
 
 echo.
@@ -31,6 +32,7 @@ echo  打包完成！产物位于 dist\ 目录：
 echo    dist\CZN_Zero_Farm.exe   (主程序)
 echo    dist\config.json         (配置，可编辑)
 echo    dist\templates\          (模板：国服/国际服/像素规则)
+echo    dist\bin\adb\            (内置 adb，ADB 设备模式需要)
 echo  分发时请将整个 dist 目录一起拷贝。
 echo  注意：脚本依赖管理员权限热键，请右键以管理员身份运行 exe。
 echo ================================================
