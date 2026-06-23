@@ -56,17 +56,17 @@ class InputMethod(str, Enum):
     SENDMESSAGE = "sendmessage"    # 后台：窗口消息，仍移动真实光标（同步阻塞）
     POSTMESSAGE = "postmessage"    # 后台：窗口消息，完全不碰真实鼠标（异步投递）
 
-    DEFAULT = "sendinput"          # 别名：默认方式（值与 SENDINPUT 相同）
+    DEFAULT = "postmessage"        # 别名：默认方式（值与 POSTMESSAGE 相同）
 
     @classmethod
     def normalize(cls, value: "Union[str, InputMethod, None]") -> str:
         """把任意输入规整为合法的方式字符串，None/空 取默认值。"""
         if value is None:
-            return cls.SENDINPUT.value
+            return cls.POSTMESSAGE.value
         if isinstance(value, cls):
             return value.value
         text = str(value).strip().lower()
-        return text or cls.SENDINPUT.value
+        return text or cls.POSTMESSAGE.value
 
 
 def find_window_by_title(title: str) -> int:

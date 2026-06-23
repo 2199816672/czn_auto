@@ -1,22 +1,22 @@
 {
   "_说明": "零式系统自动刷取脚本配置文件",
   "_坐标说明": "所有坐标均为 (x, y) 像素值，基于 1920x1080 分辨率。不同分辨率请按比例缩放。",
-  "template_profile": "templates_global",
+  "template_profile": "templates_cn",
   "_template_profiles": [
     "templates_global",
     "templates_cn"
   ],
   "game": {
-    "window_title": "卡厄思梦境",
     "resolution": [
       1920,
       1080
     ],
-    "capture_method": "auto",
-    "input_backend": "sendinput",
+    "capture_method": "framepool",
+    "input_backend": "postmessage",
     "mode": "pc",
     "mission": "zero_system",
-    "retreat_on_first_floor": true
+    "retreat_on_first_floor": false,
+    "prevent_lock": true
   },
   "hotkey": {
     "stop": "f8",

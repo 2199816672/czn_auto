@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# combat.py - 战斗模块（自动出牌逻辑）
+"""战斗模块（自动出牌逻辑）。
 
+``CombatModule`` 单一职责：在战斗回合内用轮廓分析识别手牌并依次出牌、结束回合。
+坐标/时序均来自传入的 ``config``，不硬编码。
+"""
 import time
 import logging
 from typing import Tuple

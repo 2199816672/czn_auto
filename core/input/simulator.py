@@ -1,10 +1,7 @@
-import json
 import logging
-import sys
-from pathlib import Path
 from typing import List, Tuple
 
-from .base import InputMethod, find_window_by_title
+from .base import InputMethod
 from . import create_backend
 
 
@@ -17,7 +14,7 @@ class InputSimulator:
     向后兼容所有调用方。
     """
 
-    def __init__(self, backend: str = "sendinput", target_hwnd: int = 0):
+    def __init__(self, backend: str = "postmessage", target_hwnd: int = 0):
         self.method = InputMethod.normalize(backend)
         self.backend = create_backend(self.method)
         self._keep_mouse = False
@@ -43,26 +40,13 @@ class InputSimulator:
         self.backend.set_window(hwnd)
 
     def _find_window(self) -> int:
-        cfg_path = None
-        if getattr(sys, "frozen", False):
-            cfg_path = Path(sys.executable).parent / "config.json"
-            if not cfg_path.exists():
-                cfg_path = Path(sys._MEIPASS) / "config.json"
-        else:
-            cfg_path = Path(__file__).resolve().parents[2] / "config.json"
-        title = "卡厄思梦境"
-        if cfg_path.exists():
-            try:
-                with open(cfg_path, encoding="utf-8") as f:
-                    cfg = json.load(f)
-                title = cfg.get("game", {}).get("window_title", title)
-            except Exception:
-                pass
-        hwnd = find_window_by_title(title)
+        from core.window import resolve_hwnd
+
+        hwnd = resolve_hwnd()
         if hwnd:
-            logging.info(f"已找到窗口 '{title}' HWND={hwnd}")
+            logging.info(f"已绑定目标窗口 HWND={hwnd}")
         else:
-            logging.warning(f"未找到窗口 '{title}'，{self.method} 后端将无法点击")
+            logging.warning(f"未选择目标窗口，{self.method} 后端将无法点击")
         return hwnd
 
     # ------------------------------------------------------------------

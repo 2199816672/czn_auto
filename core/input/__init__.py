@@ -22,29 +22,29 @@ __all__ = [
 
 # 供 GUI 下拉框使用：内部值 -> 显示名
 AVAILABLE_METHODS = {
-    InputMethod.SENDINPUT.value: "SendInput (前台推荐)",
+    InputMethod.SENDINPUT.value: "SendInput (前台)",
     InputMethod.SENDMESSAGE.value: "SendMessage (后台)",
-    InputMethod.POSTMESSAGE.value: "PostMessage (后台/不碰鼠标)",
+    InputMethod.POSTMESSAGE.value: "PostMessage (后台/不碰鼠标，推荐)",
 }
 
 
 def create_backend(method: "Union[str, InputMethod, None]") -> InputBackend:
-    """根据方式名创建输入后端，未知方式回退到 SendInput。"""
+    """根据方式名创建输入后端，未知方式回退到 PostMessage。"""
     method = InputMethod.normalize(method)
+
+    if method == InputMethod.SENDINPUT.value:
+        from .sendinput import SendInputBackend
+        return SendInputBackend()
 
     if method == InputMethod.SENDMESSAGE.value:
         from .sendmessage import SendMessageBackend
         return SendMessageBackend()
 
-    if method == InputMethod.POSTMESSAGE.value:
-        from .postmessage import PostMessageBackend
-        return PostMessageBackend()
+    if method != InputMethod.POSTMESSAGE.value:
+        logging.warning(f"未知输入方式 '{method}'，回退到 postmessage")
 
-    if method != InputMethod.SENDINPUT.value:
-        logging.warning(f"未知输入方式 '{method}'，回退到 sendinput")
-
-    from .sendinput import SendInputBackend
-    return SendInputBackend()
+    from .postmessage import PostMessageBackend
+    return PostMessageBackend()
 
 
 # 末尾导入避免与 create_backend 形成循环导入

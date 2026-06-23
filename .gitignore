@@ -10,14 +10,18 @@ build/
 logs/
 debug/
 AGENTS.md
+templates/templates_colors/pixel_debugger.json
 
 # 构建产物
 dist/
 build/
 *.spec
 *.zip
+# 打包配置需纳入版本控制
+!packaging/czn_auto.spec
 
 # 临时文件
+tmp/
 *.bak
 *.recovered
 *.recovered2
