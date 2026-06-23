@@ -14,9 +14,12 @@ from PySide6.QtCore import QPoint, QRect, QSize, Qt, QThread, Signal
 from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton,
-    QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
+    QSizePolicy, QTabWidget, QTextEdit, QVBoxLayout, QWidget,
 )
 from qfluentwidgets import FluentIcon
+
+from core.matcher import StateDetector, TemplateMatcher, load_pixel_checks
+from core.matcher.pixel import PixelChecker
 
 from ..config_manager import ConfigManager
 from ..theme import Palette
@@ -33,9 +36,55 @@ def _btn(text, icon=None, kind=None, parent=None):
     return b
 
 
+def diagnose_frame(cfg: ConfigManager, frame: np.ndarray) -> dict:
+    """对一帧做状态识别 + 逐条像素规则校验，供调试展示。
+
+    返回 ``{"state", "checks", "rule_points"}``：
+    - state: 当前识别到的 GameState 值
+    - checks: 每条 pixel check 的结构化结果（state/mode/hit/points 明细）
+    - rule_points: [(ix, iy, ok)]，原图坐标，供在画面上叠加标记
+    """
+    profile = cfg.data.get("template_profile")
+    rules = load_pixel_checks(profile)
+    checker = PixelChecker(rules)
+    fh, fw = frame.shape[:2]
+
+    checks: list[dict] = []
+    rule_points: list[tuple[int, int, bool]] = []
+    for rule in checker.rules:
+        hit, _ = checker.match(frame, rule)
+        pts: list[dict] = []
+        for p in rule.points:
+            px = int(p.rx * fw)
+            py = int(p.ry * fh)
+            oob = not (0 <= px < fw and 0 <= py < fh)
+            if oob:
+                pts.append({"rx": p.rx, "ry": p.ry, "oob": True})
+                continue
+            b, g, r = (int(v) for v in frame[py, px][:3])
+            tr, tg, tb = p.rgb
+            dr, dg, db = abs(r - tr), abs(g - tg), abs(b - tb)
+            ok = dr <= p.tol and dg <= p.tol and db <= p.tol
+            pts.append({
+                "rx": p.rx, "ry": p.ry, "oob": False, "ok": ok, "tol": p.tol,
+                "expected": (tr, tg, tb), "actual": (r, g, b), "delta": (dr, dg, db),
+            })
+            rule_points.append((px, py, ok))
+        checks.append({"state": rule.state.value, "mode": rule.mode, "hit": hit, "points": pts})
+
+    try:
+        matcher = TemplateMatcher(cfg.profile_dir())
+        detector = StateDetector(matcher, rules)
+        state_val = detector.detect(frame).value
+    except Exception as e:  # noqa: BLE001 - 调试用
+        state_val = f"识别失败: {e}"
+
+    return {"state": state_val, "checks": checks, "rule_points": rule_points}
+
+
 class _FrameGrabber(QThread):
-    """后台抓取一帧，避免捕获后端预热阻塞 UI。"""
-    captured = Signal(object, bool)   # frame(BGR ndarray), 是否找到窗口
+    """后台抓取一帧并做识别诊断，避免捕获后端预热阻塞 UI。"""
+    captured = Signal(object, bool, dict)   # frame(BGR ndarray), 是否找到窗口, 诊断信息
     failed = Signal(str)
 
     def __init__(self, cfg: ConfigManager, parent=None):
@@ -45,7 +94,8 @@ class _FrameGrabber(QThread):
     def run(self):
         try:
             frame, found = grab_game_frame(self.cfg)
-            self.captured.emit(frame, found)
+            info = diagnose_frame(self.cfg, frame)
+            self.captured.emit(frame, found, info)
         except Exception as e:  # noqa: BLE001 - 调试用，吞掉异常仅报告
             self.failed.emit(str(e))
 
@@ -68,6 +118,7 @@ class ClickableImageView(QWidget):
         self._frame: np.ndarray | None = None   # BGR
         self._qimg: QImage | None = None
         self._points: list[tuple[int, int, QColor]] = []  # 原图坐标 + 颜色
+        self._rule_points: list[tuple[int, int, bool]] = []  # 像素规则点 + 是否通过
         self._draw_rect = QRect()  # 当前图像在控件中的绘制区域
 
     @property
@@ -80,6 +131,11 @@ class ClickableImageView(QWidget):
         h, w = rgb.shape[:2]
         self._qimg = QImage(rgb.data, w, h, 3 * w, QImage.Format.Format_RGB888).copy()
         self._points.clear()
+        self._rule_points.clear()
+        self.update()
+
+    def set_rule_points(self, points: list[tuple[int, int, bool]]):
+        self._rule_points = list(points)
         self.update()
 
     def clear_points(self):
@@ -110,9 +166,18 @@ class ClickableImageView(QWidget):
         p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
         p.drawImage(self._draw_rect, self._qimg)
 
-        # 标记已采样的点
         iw, ih = self._qimg.width(), self._qimg.height()
         scale = self._draw_rect.width() / iw if iw else 1
+
+        # 叠加像素规则点（绿=通过 / 红=不通过）
+        for ix, iy, ok in self._rule_points:
+            sx = self._draw_rect.x() + int(ix * scale)
+            sy = self._draw_rect.y() + int(iy * scale)
+            col = QColor(Palette.RUNNING) if ok else QColor(Palette.LOG_ERROR)
+            p.setPen(QPen(col, 2))
+            p.drawRect(sx - 6, sy - 6, 12, 12)
+
+        # 标记已采样的点
         for i, (ix, iy, color) in enumerate(self._points, 1):
             sx = self._draw_rect.x() + int(ix * scale)
             sy = self._draw_rect.y() + int(iy * scale)
@@ -190,10 +255,28 @@ class PixelDebugTab(QWidget):
 
         panel = QFrame(self)
         panel.setObjectName("card")
-        panel.setFixedWidth(320)
+        panel.setFixedWidth(360)
         pv = QVBoxLayout(panel)
         pv.setContentsMargins(14, 14, 14, 14)
         pv.setSpacing(10)
+
+        state_cap = QLabel("检测状态", panel)
+        state_cap.setObjectName("statTitle")
+        pv.addWidget(state_cap)
+        self.state_label = QLabel("—", panel)
+        self.state_label.setObjectName("statValue")
+        pv.addWidget(self.state_label)
+
+        diag_cap = QLabel("像素规则校验", panel)
+        diag_cap.setObjectName("sectionTitle")
+        pv.addWidget(diag_cap)
+        self.diag = QTextEdit(panel)
+        self.diag.setObjectName("logView")
+        self.diag.setReadOnly(True)
+        self.diag.setFont(QFont("Cascadia Mono, Consolas", 9))
+        self.diag.setMinimumHeight(150)
+        pv.addWidget(self.diag)
+
         cap = QLabel("采样点", panel)
         cap.setObjectName("sectionTitle")
         pv.addWidget(cap)
@@ -215,7 +298,7 @@ class PixelDebugTab(QWidget):
         self._grabber.failed.connect(self._on_failed)
         self._grabber.start()
 
-    def _on_captured(self, frame: np.ndarray, found: bool):
+    def _on_captured(self, frame: np.ndarray, found: bool, info: dict):
         self.btn_capture.setEnabled(True)
         self.btn_capture.setText("捕获画面")
         self.view.set_frame(frame)
@@ -223,7 +306,44 @@ class PixelDebugTab(QWidget):
         h, w = frame.shape[:2]
         tag = "" if found else "（未找到游戏窗口，使用整屏/空帧）"
         self.res_label.setText(f"画面 {w}x{h} {tag}")
-        logging.info(f"调试像素点: 已捕获画面 {w}x{h} {tag}")
+
+        state = info.get("state", "—")
+        self.state_label.setText(state)
+        self.diag.setHtml(self._render_checks(info.get("checks", [])))
+        self.view.set_rule_points(info.get("rule_points", []))
+        logging.info(f"调试像素点: 已捕获画面 {w}x{h} 识别状态=[{state}] {tag}")
+
+    def _render_checks(self, checks: list[dict]) -> str:
+        """把每条 pixel check 的检测结果渲染成彩色 HTML。"""
+        ok_c, bad_c, mut_c = Palette.RUNNING, Palette.LOG_ERROR, Palette.TEXT_MUTED
+        if not checks:
+            return f'<span style="color:{mut_c};">未加载到任何像素规则</span>'
+        parts: list[str] = []
+        for c in checks:
+            hit = c["hit"]
+            badge = "命中" if hit else "未命中"
+            badge_c = ok_c if hit else bad_c
+            parts.append(
+                f'<div style="margin-top:6px;">'
+                f'<b style="color:{Palette.TEXT_STRONG};">[{c["state"]}]</b> '
+                f'<span style="color:{mut_c};">mode={c["mode"]}</span> '
+                f'<b style="color:{badge_c};">{badge}</b></div>'
+            )
+            for p in c["points"]:
+                coord = f'({p["rx"]:.4f},{p["ry"]:.4f})'
+                if p.get("oob"):
+                    parts.append(f'<div style="color:{bad_c};">&nbsp;&nbsp;{coord} 坐标越界</div>')
+                    continue
+                ok = p["ok"]
+                pc = ok_c if ok else bad_c
+                exp = "期望({},{},{})".format(*p["expected"])
+                act = "实际({},{},{})".format(*p["actual"])
+                dlt = "Δ({},{},{})".format(*p["delta"])
+                parts.append(
+                    f'<div style="color:{mut_c};">&nbsp;&nbsp;{coord} {exp} {act} '
+                    f'<span style="color:{pc};">{dlt} tol={p["tol"]} {"OK" if ok else "X"}</span></div>'
+                )
+        return "".join(parts)
 
     def _on_failed(self, msg: str):
         self.btn_capture.setEnabled(True)
