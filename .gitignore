@@ -10,6 +10,7 @@ build/
 logs/
 debug/
 AGENTS.md
+templates_colors/pixel_debugger.json
 
 # 构建产物
 dist/
@@ -18,6 +19,7 @@ build/
 *.zip
 
 # 临时文件
+tmp/
 *.bak
 *.recovered
 *.recovered2
