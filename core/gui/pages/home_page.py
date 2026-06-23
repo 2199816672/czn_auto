@@ -8,9 +8,11 @@ import time
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QPushButton, QTextEdit, QVBoxLayout, QWidget,
+    QComboBox, QFrame, QHBoxLayout, QLabel, QPushButton, QTextEdit, QVBoxLayout, QWidget,
 )
 from qfluentwidgets import FluentIcon
+
+from core.window import discover_windows, get_selected, select_window
 
 from ..config_manager import ConfigManager
 from ..constants import MISSION_DISPLAY, PROFILE_TO_SERVER, SERVER_TO_PROFILE, STAT_ITEMS
@@ -111,6 +113,7 @@ class HomePage(QWidget):
         self.log.setFont(QFont("Cascadia Mono, Consolas", 10))
         root.addWidget(self.log, 1)
 
+        self._refresh_windows()
         self.set_running_ui(False, False)
 
     def _build_control_card(self) -> QFrame:
@@ -120,6 +123,21 @@ class HomePage(QWidget):
         lay = QVBoxLayout(card)
         lay.setContentsMargins(20, 18, 20, 18)
         lay.setSpacing(16)
+
+        # 选择目标窗口（游戏 / 后续模拟器）
+        win_row = QHBoxLayout()
+        win_row.setSpacing(10)
+        win_lbl = QLabel("目标窗口", card)
+        win_lbl.setObjectName("fieldLabel")
+        self.cb_window = QComboBox(card)
+        self.cb_window.setMinimumWidth(320)
+        self.cb_window.currentIndexChanged.connect(self._on_window_changed)
+        self.btn_refresh_win = _btn("刷新", FluentIcon.SYNC, "ghost", card)
+        self.btn_refresh_win.clicked.connect(self._refresh_windows)
+        win_row.addWidget(win_lbl)
+        win_row.addWidget(self.cb_window, 1)
+        win_row.addWidget(self.btn_refresh_win)
+        lay.addLayout(win_row)
 
         # 快速切换：服务器 / 刷取模式
         quick = QHBoxLayout()
@@ -195,6 +213,42 @@ class HomePage(QWidget):
         self.seg_server.set_value(self.cfg.profile)
         self.seg_mission.set_value(self.cfg.data.get("game", {}).get("mission", "zero_system"))
 
+    # ---- 目标窗口选择（进程全局，不入 config）----
+    def _refresh_windows(self):
+        """枚举候选窗口填充下拉，并尽量沿用当前已选中的窗口。"""
+        prev = get_selected()
+
+        self.cb_window.blockSignals(True)
+        self.cb_window.clear()
+
+        targets = discover_windows()
+        sel_index = -1
+        for t in targets:
+            self.cb_window.addItem(t.display, t)
+            if prev is not None and sel_index < 0 and (
+                t.hwnd == prev.hwnd
+                or (t.title == prev.title and t.provider_key == prev.provider_key)
+            ):
+                sel_index = self.cb_window.count() - 1
+
+        if not targets:
+            self.cb_window.addItem("未找到游戏窗口，请先启动游戏后点刷新", None)
+            sel_index = 0
+        elif sel_index < 0:
+            sel_index = 0
+
+        self.cb_window.setCurrentIndex(sel_index)
+        self.cb_window.blockSignals(False)
+        # 同步全局选择到下拉当前项（即使没有用户交互）
+        select_window(self.cb_window.itemData(sel_index))
+        logging.info(f"发现 {len(targets)} 个候选窗口")
+
+    def _on_window_changed(self, index: int):
+        target = self.cb_window.itemData(index)
+        select_window(target)
+        if target is not None:
+            logging.info(f"选择目标窗口: {target.title} (句柄={target.hwnd})")
+
     # ---- 对外接口 ----
     def append_log(self, msg: str, levelno: int, is_state: bool):
         if levelno >= logging.ERROR:
@@ -223,6 +277,8 @@ class HomePage(QWidget):
         self.btn_stop.setEnabled(running)
         self.seg_server.setEnabled(not running)
         self.seg_mission.setEnabled(not running)
+        self.cb_window.setEnabled(not running)
+        self.btn_refresh_win.setEnabled(not running)
         self.btn_pause.setText("继续 (F9)" if paused else "暂停 (F9)")
         if running and paused:
             self.set_status("已暂停", Palette.PAUSED)

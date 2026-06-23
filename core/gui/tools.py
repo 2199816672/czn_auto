@@ -13,6 +13,7 @@ import cv2
 
 from core.screencap import CaptureMethod, ScreenCapturer
 from core.matcher import StateDetector, TemplateMatcher, load_pixel_checks
+from core.window import resolve_hwnd
 
 from .config_manager import ConfigManager
 from .constants import DEBUG_DIR
@@ -31,10 +32,9 @@ def grab_game_frame(cfg_mgr: ConfigManager):
     """按当前配置抓取一帧归一化游戏画面（BGR ndarray）。供调试页即时取画面。"""
     g = cfg_mgr.data.get("game", {})
     method = g.get("capture_method", CaptureMethod.DEFAULT.value)
-    title = g.get("window_title", "卡厄思梦境")
 
     cap = ScreenCapturer(method=method)
-    hwnd = ctypes.windll.user32.FindWindowW(None, title)
+    hwnd = resolve_hwnd()
     if hwnd:
         cap.set_window(hwnd)
     try:
@@ -64,12 +64,11 @@ class CaptureService:
     def _run(self):
         g = self.cfg.data.get("game", {})
         method = g.get("capture_method", CaptureMethod.DEFAULT.value)
-        title = g.get("window_title", "卡厄思梦境")
         tdir = self.cfg.profile_dir()
         tdir.mkdir(parents=True, exist_ok=True)
 
         cap = ScreenCapturer(method=method)
-        hwnd = ctypes.windll.user32.FindWindowW(None, title)
+        hwnd = resolve_hwnd()
         if hwnd:
             cap.set_window(hwnd)
 
@@ -116,14 +115,16 @@ class DiagnoseService:
         matcher = TemplateMatcher(tdir)
         detector = StateDetector(matcher, load_pixel_checks(cfg.get("template_profile")))
 
-        title = cfg.get("game", {}).get("window_title", "卡厄思梦境")
-        hwnd = user32.FindWindowW(None, title)
+        hwnd = resolve_hwnd()
         if hwnd:
             cap.set_window(hwnd)
 
         logging.info("=" * 40)
         logging.info(f"诊断模式 [{self.cfg.profile}] 捕获方式={method}")
         if hwnd:
+            from core.window import get_selected, get_window_title
+            sel = get_selected()
+            title = sel.title if sel else get_window_title(hwnd)
             rect = ctypes.wintypes.RECT()
             user32.GetWindowRect(hwnd, ctypes.byref(rect))
             w, h = rect.right - rect.left, rect.bottom - rect.top
@@ -131,7 +132,7 @@ class DiagnoseService:
             logging.info(f"      标题: {title}  句柄: {hwnd}")
             logging.info(f"      位置: ({rect.left},{rect.top})  {w}x{h}")
         else:
-            logging.info(f"   未找到窗口 [{title}]，请确认窗口标题")
+            logging.info("   未选择目标窗口，请在首页选择窗口")
 
         frame = cap.capture_game_area()
         res = cap.get_resolution()
