@@ -33,9 +33,9 @@ PROFILE_TO_SERVER = {v: k for k, v in SERVER_TO_PROFILE.items()}
 MISSION_DISPLAY = {"zero_system": "零式系统", "season_reroll": "赛季图初始刷取"}
 MODE_DISPLAY = {"pc": "PC端/云游戏", "emulator": "模拟器"}
 INPUT_BACKEND_DISPLAY = {
-    "sendinput": "SendInput (前台推荐)",
+    "sendinput": "SendInput (前台)",
     "sendmessage": "SendMessage (后台)",
-    "postmessage": "PostMessage (后台)",
+    "postmessage": "PostMessage (后台推荐)",
 }
 
 # 房间路线优先级显示名

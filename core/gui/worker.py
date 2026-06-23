@@ -83,7 +83,7 @@ class AutomationWorker(QThread):
             logging.info(f"锁定游戏窗口: {title} 句柄={hwnd} 捕获方式={capturer.method}")
         matcher = TemplateMatcher(tdir)
         detector = StateDetector(matcher, load_pixel_checks(cfg.get("template_profile")))
-        sim = InputSimulator(backend=g.get("input_backend", "sendinput"))
+        sim = InputSimulator(backend=g.get("input_backend", "postmessage"))
         sim.keep_mouse = cfg.get("debug", {}).get("keep_mouse", False)
 
         # 坐标变换：点击自动从游戏坐标转屏幕坐标

@@ -135,7 +135,7 @@ class SettingsPage(QScrollArea):
 
         self.input_combo = _combo(
             list(INPUT_BACKEND_DISPLAY.values()),
-            INPUT_BACKEND_DISPLAY.get(g.get("input_backend", "sendinput"), "SendInput (前台推荐)"),
+            INPUT_BACKEND_DISPLAY.get(g.get("input_backend", "postmessage"), "PostMessage (后台推荐)"),
         )
         sec.add("输入方式", self.input_combo)
 
@@ -312,7 +312,7 @@ class SettingsPage(QScrollArea):
         g = d.setdefault("game", {})
 
         g["mode"] = self._reverse(MODE_DISPLAY, self.mode_combo.currentText(), "pc")
-        g["input_backend"] = self._reverse(INPUT_BACKEND_DISPLAY, self.input_combo.currentText(), "sendinput")
+        g["input_backend"] = self._reverse(INPUT_BACKEND_DISPLAY, self.input_combo.currentText(), "postmessage")
         g["capture_method"] = self._reverse(AVAILABLE_METHODS, self.capture_combo.currentText(),
                                             CaptureMethod.DEFAULT.value)
         g["retreat_on_first_floor"] = self.sw_retreat.isChecked()

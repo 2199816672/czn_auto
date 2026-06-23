@@ -16,7 +16,7 @@ class InputSimulator:
     向后兼容所有调用方。
     """
 
-    def __init__(self, backend: str = "sendinput", target_hwnd: int = 0):
+    def __init__(self, backend: str = "postmessage", target_hwnd: int = 0):
         self.method = InputMethod.normalize(backend)
         self.backend = create_backend(self.method)
         self._keep_mouse = False
