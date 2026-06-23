@@ -84,69 +84,22 @@ class HomePage(QWidget):
         root.setContentsMargins(28, 24, 28, 24)
         root.setSpacing(18)
 
+        # 顶部：标题 + 运行状态
+        header = QHBoxLayout()
+        header.setSpacing(10)
         title = QLabel("运行面板", self)
         title.setObjectName("pageTitle")
-        root.addWidget(title)
-
-        # 快速切换：服务器 / 刷取模式
-        quick = QHBoxLayout()
-        quick.setSpacing(10)
-        srv_lbl = QLabel("服务器", self)
-        srv_lbl.setObjectName("fieldLabel")
-        self.seg_server = SegmentedControl(
-            [(profile, label) for label, profile in SERVER_TO_PROFILE.items()],
-            current_key=self.cfg.profile, parent=self,
-        )
-        self.seg_server.changed.connect(self._on_server_changed)
-        mode_lbl = QLabel("模式", self)
-        mode_lbl.setObjectName("fieldLabel")
-        self.seg_mission = SegmentedControl(
-            list(MISSION_DISPLAY.items()),
-            current_key=self.cfg.data.get("game", {}).get("mission", "zero_system"),
-            parent=self,
-        )
-        self.seg_mission.changed.connect(self._on_mission_changed)
-        quick.addWidget(srv_lbl)
-        quick.addWidget(self.seg_server)
-        quick.addSpacing(20)
-        quick.addWidget(mode_lbl)
-        quick.addWidget(self.seg_mission)
-        quick.addStretch(1)
-        root.addLayout(quick)
-
-        # 控制按钮
-        ctrl = QHBoxLayout()
-        ctrl.setSpacing(10)
-        self.btn_start = _btn("开始运行 (F6)", FluentIcon.PLAY, "primary", self)
-        self.btn_pause = _btn("暂停 (F9)", FluentIcon.PAUSE, None, self)
-        self.btn_stop = _btn("停止 (F8)", FluentIcon.CLOSE, "danger", self)
-        self.btn_start.clicked.connect(self.startRequested)
-        self.btn_pause.clicked.connect(self.pauseRequested)
-        self.btn_stop.clicked.connect(self.stopRequested)
-        for b in (self.btn_start, self.btn_pause, self.btn_stop):
-            b.setMinimumHeight(40)
-        ctrl.addWidget(self.btn_start)
-        ctrl.addWidget(self.btn_pause)
-        ctrl.addWidget(self.btn_stop)
-        ctrl.addStretch(1)
+        header.addWidget(title)
+        header.addStretch(1)
         self.status_dot = QLabel("●", self)
         self.status_label = QLabel("已停止", self)
         self.status_label.setObjectName("fieldLabel")
-        ctrl.addWidget(self.status_dot)
-        ctrl.addWidget(self.status_label)
-        root.addLayout(ctrl)
+        header.addWidget(self.status_dot)
+        header.addWidget(self.status_label)
+        root.addLayout(header)
 
-        # 统计卡片
-        stats = QHBoxLayout()
-        stats.setSpacing(14)
-        for key, name in STAT_ITEMS:
-            card = StatCard(name, self)
-            self._cards[key] = card
-            stats.addWidget(card)
-        self._time_card = StatCard("耗时", self)
-        self._time_card.set_value("00:00:00")
-        stats.addWidget(self._time_card)
-        root.addLayout(stats)
+        root.addWidget(self._build_control_card())
+        root.addLayout(self._build_stats_row())
 
         # 日志
         log_title = QLabel("运行日志", self)
@@ -159,6 +112,70 @@ class HomePage(QWidget):
         root.addWidget(self.log, 1)
 
         self.set_running_ui(False, False)
+
+    def _build_control_card(self) -> QFrame:
+        """控制卡片：快速切换（服务器/模式）+ 开始/暂停/停止按钮。"""
+        card = QFrame(self)
+        card.setObjectName("card")
+        lay = QVBoxLayout(card)
+        lay.setContentsMargins(20, 18, 20, 18)
+        lay.setSpacing(16)
+
+        # 快速切换：服务器 / 刷取模式
+        quick = QHBoxLayout()
+        quick.setSpacing(10)
+        srv_lbl = QLabel("服务器", card)
+        srv_lbl.setObjectName("fieldLabel")
+        self.seg_server = SegmentedControl(
+            [(profile, label) for label, profile in SERVER_TO_PROFILE.items()],
+            current_key=self.cfg.profile, parent=card,
+        )
+        self.seg_server.changed.connect(self._on_server_changed)
+        mode_lbl = QLabel("模式", card)
+        mode_lbl.setObjectName("fieldLabel")
+        self.seg_mission = SegmentedControl(
+            list(MISSION_DISPLAY.items()),
+            current_key=self.cfg.data.get("game", {}).get("mission", "zero_system"),
+            parent=card,
+        )
+        self.seg_mission.changed.connect(self._on_mission_changed)
+        quick.addWidget(srv_lbl)
+        quick.addWidget(self.seg_server)
+        quick.addSpacing(20)
+        quick.addWidget(mode_lbl)
+        quick.addWidget(self.seg_mission)
+        quick.addStretch(1)
+        lay.addLayout(quick)
+
+        # 控制按钮
+        ctrl = QHBoxLayout()
+        ctrl.setSpacing(10)
+        self.btn_start = _btn("开始运行 (F6)", FluentIcon.PLAY, "primary", card)
+        self.btn_pause = _btn("暂停 (F9)", FluentIcon.PAUSE, None, card)
+        self.btn_stop = _btn("停止 (F8)", FluentIcon.CLOSE, "danger", card)
+        self.btn_start.clicked.connect(self.startRequested)
+        self.btn_pause.clicked.connect(self.pauseRequested)
+        self.btn_stop.clicked.connect(self.stopRequested)
+        for b in (self.btn_start, self.btn_pause, self.btn_stop):
+            b.setMinimumHeight(40)
+        ctrl.addWidget(self.btn_start, 2)
+        ctrl.addWidget(self.btn_pause, 1)
+        ctrl.addWidget(self.btn_stop, 1)
+        lay.addLayout(ctrl)
+        return card
+
+    def _build_stats_row(self) -> QHBoxLayout:
+        """统计卡片行：局 / 战 / 事件 / 耗时，等宽铺满。"""
+        stats = QHBoxLayout()
+        stats.setSpacing(14)
+        for key, name in STAT_ITEMS:
+            card = StatCard(name, self)
+            self._cards[key] = card
+            stats.addWidget(card, 1)
+        self._time_card = StatCard("耗时", self)
+        self._time_card.set_value("00:00:00")
+        stats.addWidget(self._time_card, 1)
+        return stats
 
     # ---- 快速切换 ----
     def _on_server_changed(self, profile: str):

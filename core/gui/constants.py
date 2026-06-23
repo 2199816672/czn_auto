@@ -115,7 +115,5 @@ COMBAT_TIPS = {
 STAT_ITEMS = [
     ("runs", "局"),
     ("battles", "战"),
-    ("elites", "精英"),
-    ("floors", "层"),
     ("events", "事件"),
 ]
