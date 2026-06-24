@@ -130,6 +130,8 @@ class AutomationWorker(QThread):
         if not retreat_on_first:
             skip_templates.add("retreat")
             skip_pixel_states.add(GameState.RETREAT_FALLBACK)
+            skip_pixel_states.add(GameState.RETREAT)
+            skip_pixel_states.add(GameState.RETREAT1)
 
         logging.info(f"=== 开始运行 [配置: {tdir.name}] ===")
 
@@ -331,6 +333,15 @@ class AutomationWorker(QThread):
             logging.info("跳过确认")
             _click("skip_confirm")
         elif state == GS.RESULT_NEXT:
+            if cfg.get("retreat_on_first_floor", False):
+                rule = next((r for r in detector.pixel_checker.rules if r.state == GameState.RETREAT), None)
+                if rule:
+                    hit, pos = detector.pixel_checker.match(frame, rule)
+                    if hit:
+                        logging.info("结算界面检测到retreat_btn，点击撤退")
+                        detector._record(GameState.RETREAT, pos, 1.0, "pixel:retreat_btn_result")
+                        sim.click_at(pos[0], pos[1], res[0], res[1])
+                        return
             self._handle_result_next(frame, detector, sim, res, settlement_tpls)
         elif state == GS.FATE_REWARD:
             logging.info("获取命运→确定")
@@ -371,17 +382,23 @@ class AutomationWorker(QThread):
             if detector.last_template in ("retreat", "pixel:retreat", "pixel:retreat_btn"):
                 cx, cy = detector.last_pos
                 if self._retreat_toggle % 2 == 0:
-                    logging.info("撤退 右边 右455")
-                    sim.click_at(cx + 455, cy, res[0], res[1])
+                    logging.info("撤退 右边 右700下20")
+                    sim.click_at(cx + 700, cy + 20, res[0], res[1])
                 else:
-                    logging.info("撤退 右上角 右596上915")
-                    sim.click_at(cx + 596, cy - 915, res[0], res[1])
+                    logging.info("撤退 右上角 右821上915")
+                    sim.click_at(cx + 821, cy - 915, res[0], res[1])
                 self._retreat_toggle += 1
-                self._retreat_cooldown = time.time() + 5.0
+                self._retreat_cooldown = time.time() + 60.0
                 time.sleep(sr_delay)
             else:
                 logging.info("设置→脱离")
                 click_last()
+        elif state == GS.RETREAT1:
+            logging.info("齿轮图标")
+            click_last()
+        elif state == GS.ATTACK_I:
+            logging.info("攻击按钮")
+            click_last()
         elif state == GS.REMOVE_CARD_EVENT:
             logging.info("移除卡牌")
             _click("remove_card_event")
@@ -393,6 +410,12 @@ class AutomationWorker(QThread):
             _click("chaos_center")
         elif state == GS.CONFIRM_PURPLE:
             logging.info("紫色确认")
+            click_last()
+        elif state == GS.PURPLE_CONFIRM:
+            logging.info("紫色确认2")
+            click_last()
+        elif state == GS.DIFFICULTY_CONFIRM:
+            logging.info("难度确认")
             click_last()
         elif state == GS.CONFIRM_ORANGE:
             logging.info("橙色确认")
@@ -555,7 +578,7 @@ class AutomationWorker(QThread):
                     logging.info("撤退模式 点击retreat_btn 退出")
                     sim.click_at(pos[0], pos[1], res[0], res[1])
                     self._fallback_retreating = False
-                    self._retreat_cooldown = time.time() + 3.0
+                    self._retreat_cooldown = time.time() + 60.0
                 else:
                     logging.info(f"撤退模式 点击{name}")
                     sim.click_at(pos[0], pos[1], res[0], res[1])

@@ -1,7 +1,7 @@
 {
   "_说明": "零式系统自动刷取脚本配置文件",
   "_坐标说明": "所有坐标均为 (x, y) 像素值，基于 1920x1080 分辨率。不同分辨率请按比例缩放。",
-  "template_profile": "templates_global",
+  "template_profile": "templates_cn",
   "_template_profiles": [
     "templates_global",
     "templates_cn"
@@ -190,7 +190,7 @@
   "timing": {
     "screenshot_interval": 0.8,
     "click_delay": 0.1,
-    "post_click_wait": 0.5,
+    "post_click_wait": 0.8,
     "state_check_retries": 1.0,
     "state_check_interval": 0.2,
     "between_runs_delay": 1.0

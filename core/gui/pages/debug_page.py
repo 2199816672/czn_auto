@@ -58,8 +58,8 @@ def diagnose_frame(cfg: ConfigManager, frame: np.ndarray) -> dict:
         pts: list[dict] = []
         hit_points: list[tuple[int, int, bool]] = []
         for p in rule.points:
-            px = int(p.rx * fw)
-            py = int(p.ry * fh)
+            px = int(round(p.rx * fw))
+            py = int(round(p.ry * fh))
             oob = not (0 <= px < fw and 0 <= py < fh)
             if oob:
                 pts.append({"rx": p.rx, "ry": p.ry, "oob": True})
@@ -402,17 +402,14 @@ class PixelDebugTab(QWidget):
             logging.warning("输出像素规则: 采样点为空")
             return
 
-        # 从 pixel_checks.json 加载已有规则（避免覆盖），追加新采样后再写回
         path = PIXEL_DEBUGGER_PATH
-        checks_path = path.with_name("pixel_checks.json")
         data: list = []
-        source = checks_path if checks_path.exists() else path
-        if source.exists():
+        if path.exists():
             try:
-                loaded = json.loads(source.read_text(encoding="utf-8"))
+                loaded = json.loads(path.read_text(encoding="utf-8"))
                 if isinstance(loaded, list):
                     data = loaded
-            except Exception as e:  # noqa: BLE001 - 调试用，损坏则覆盖
+            except Exception as e:
                 logging.warning(f"读取已有规则失败，将重建: {e}")
 
         entry = {
@@ -421,15 +418,14 @@ class PixelDebugTab(QWidget):
             "points": [dict(p) for p in self._samples],
         }
         data.append(entry)
-        # 同时写入 pixel_checks.json 和 pixel_debugger.json
-        for target in (checks_path, path):
-            try:
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-            except Exception as e:  # noqa: BLE001 - 调试用
-                self.res_label.setText(f"写入 {target.name} 失败")
-                logging.error(f"输出像素规则: 写入 {target.name} 失败 {e}")
-                return
+        # 仅写入 pixel_debugger.json，pixel_checks.json 手动编辑
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception as e:  # noqa: BLE001 - 调试用
+            self.res_label.setText(f"写入 {path.name} 失败")
+            logging.error(f"输出像素规则: 写入 {path.name} 失败 {e}")
+            return
         self.res_label.setText(f"已输出 [{state}] {len(self._samples)} 点，总计 {len(data)} 条规则")
         logging.info(
             f"输出像素规则: 已追加 state=[{state}] {len(self._samples)} 点 -> pixel_checks.json"

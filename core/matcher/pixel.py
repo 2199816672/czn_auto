@@ -134,8 +134,8 @@ class PixelChecker:
         first_pt: Optional[Tuple[int, int]] = None
         results: List[bool] = []
         for p in rule.points:
-            px = int(p.rx * fw)
-            py = int(p.ry * fh)
+            px = int(round(p.rx * fw))
+            py = int(round(p.ry * fh))
             if first_pt is None:
                 first_pt = (px, py)
             if not (0 <= px < fw and 0 <= py < fh):
@@ -152,7 +152,7 @@ class PixelChecker:
         if not hit:
             return False, None
         if rule.click:
-            click_pt = (int(float(rule.click[0]) * fw), int(float(rule.click[1]) * fh))
+            click_pt = (int(round(float(rule.click[0]) * fw)), int(round(float(rule.click[1]) * fh)))
         else:
             click_pt = first_pt
         return True, click_pt

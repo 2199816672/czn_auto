@@ -21,7 +21,7 @@ if getattr(sys, "frozen", False):
 else:
     ICON_PATH = BASE_DIR / "packaging" / "app_icon.ico"
 
-WINDOW_TITLE = "CZN Zero Farm v2.0 - 零式系统自动刷取"
+WINDOW_TITLE = "CZN Zero Farm v2.1 - 零式系统自动刷取"
 
 PROFILES = ["templates_cn", "templates_global"]
 
