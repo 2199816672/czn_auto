@@ -70,6 +70,8 @@ class GameState(Enum):
     DIFFICULTY_CONFIRM = "difficulty_confirm"
     RETREAT1 = "retreat1"
     ATTACK_I = "attack_i"
+    CLOSE_WINDOW = "off"
+    CLOSE_WINDOW1 = "off1"
     TUI1 = "tui1"
     TUI2 = "tui2"
     UNKNOWN = "unknown"

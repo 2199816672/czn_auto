@@ -399,6 +399,12 @@ class AutomationWorker(QThread):
         elif state == GS.ATTACK_I:
             logging.info("攻击按钮")
             click_last()
+        elif state == GS.CLOSE_WINDOW:
+            logging.info("关闭窗口")
+            click_last()
+        elif state == GS.CLOSE_WINDOW1:
+            logging.info("关闭窗口2")
+            click_last()
         elif state == GS.REMOVE_CARD_EVENT:
             logging.info("移除卡牌")
             _click("remove_card_event")
