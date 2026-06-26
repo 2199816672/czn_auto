@@ -199,7 +199,7 @@ class AutomationWorker(QThread):
                 if self._codex_active or state == GameState.CODEX_SYNTH:
                     self._codex_active = True
                     clicked = False
-                    if state == GameState.CODEX_SYNTH and detector.last_template == "codex_synth":
+                    if state == GameState.CODEX_SYNTH and detector.last_template and "codex_synth" in detector.last_template:
                         logging.info("合成点击codex_synth")
                         sim.click_at(detector.last_pos[0], detector.last_pos[1], res[0], res[1])
                         clicked = True
@@ -404,6 +404,9 @@ class AutomationWorker(QThread):
             click_last()
         elif state == GS.CLOSE_WINDOW1:
             logging.info("关闭窗口2")
+            click_last()
+        elif state in (GS.DELETE_SAVE1, GS.DELETE_SAVE2, GS.DELETE_SAVE3):
+            logging.info("删除存档")
             click_last()
         elif state == GS.REMOVE_CARD_EVENT:
             logging.info("移除卡牌")

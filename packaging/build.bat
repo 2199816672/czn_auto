@@ -29,7 +29,7 @@ if not exist dist\logs mkdir dist\logs
 echo.
 echo ================================================
 echo  打包完成！产物位于 dist\ 目录：
-echo    dist\CZN_Zero_Farm_v2.2.exe   (主程序)
+echo    dist\CZN_Zero_Farm_v2.3.exe   (主程序)
 echo    dist\config.json         (配置，可编辑)
 echo    dist\templates\          (模板：国服/国际服/像素规则)
 echo    dist\bin\adb\            (内置 adb，ADB 设备模式需要)

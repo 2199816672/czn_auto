@@ -72,6 +72,9 @@ class GameState(Enum):
     ATTACK_I = "attack_i"
     CLOSE_WINDOW = "off"
     CLOSE_WINDOW1 = "off1"
+    DELETE_SAVE1 = "delete1"   # 删除存档 左
+    DELETE_SAVE2 = "delete2"   # 删除存档 中
+    DELETE_SAVE3 = "delete3"   # 删除存档 右
     TUI1 = "tui1"
     TUI2 = "tui2"
     UNKNOWN = "unknown"

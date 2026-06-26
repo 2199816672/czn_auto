@@ -94,7 +94,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name="CZN_Zero_Farm_v2.2",
+    name="CZN_Zero_Farm_v2.3",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
